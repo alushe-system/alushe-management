@@ -103,7 +103,7 @@ tbody tr:hover td:first-child{background:#fffbf7;}
 
 <div class="modal-overlay" id="productivity-modal">
   <div class="modal">
-    <div class="modal-title">📊 人事生産性設定</div>
+    <div class="modal-title">📊 役職別基準値設定</div>
     <div class="modal-sub">役職ごとの月間売上目標（税込）</div>
     <div id="productivity-fields"></div>
     <div class="modal-actions">
@@ -133,7 +133,7 @@ tbody tr:hover td:first-child{background:#fffbf7;}
     <select class="month-sel" id="month-sel" onchange="onMonthChange()"></select>
     <button class="month-nav-btn" onclick="shiftMonth(1)">▶</button>
     <button class="sub-btn" onclick="showAddModal()">＋ 月を追加</button>
-    <button class="sub-btn" id="btn-productivity" onclick="showProductivityModal()" style="display:none">📊 人事生産性</button>
+    <button class="sub-btn" id="btn-productivity" onclick="showProductivityModal()" style="display:none">📊 役職別基準値</button>
     <button class="sub-btn" id="btn-material" onclick="showMaterialModal()" style="display:none">🧾 材料比率</button>
     <button class="sub-btn" onclick="location.href='trends.html'">📈 年間推移</button>
   </div>
@@ -364,7 +364,7 @@ function updateTotals(){
   }
 }
 
-// ===== 人事生産性 =====
+// ===== 役職別基準値 =====
 async function loadProductivity(){
   const {data}=await sb.from('role_productivity').select('*').lte('month',currentMonth).order('month',{ascending:false});
   roleProductivity={};
