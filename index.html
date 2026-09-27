@@ -439,7 +439,7 @@ function initStaticUI(){
   document.getElementById('ov-store-filter').innerHTML=storeOptionsHtml('',true);
   document.getElementById('sf-store-filter').innerHTML=storeOptionsHtml('',true);
   document.getElementById('sm-position').innerHTML='<option value="">未設定</option>'+positionOptionsHtml('');
-  document.getElementById('sf-pos-filter').innerHTML='<option value="">すべての役職</option>'+positionOptionsHtml('');
+  document.getElementById('sf-pos-filter').innerHTML='<option value="">すべての役職</option>'+positionOptionsHtml('',APP_CONFIG.positions.filter(function(p){return !(APP_CONFIG.hiddenPositions||['管理者']).includes(p);}));
   document.getElementById('reg-store').innerHTML='<option value="">選択してください</option>'+storeOptionsHtml('',false);
   document.getElementById('reg-position').innerHTML='<option value="">選択してください</option>'+positionOptionsHtml('',APP_CONFIG.selfRegisterPositions);
   document.getElementById('curr-tab-individual').textContent='👤 個人';
@@ -520,7 +520,11 @@ function renderDashboard(){
         +'<div style="font-size:11px;color:#c4b49e;">企業理念を読む →</div></div>';
       const cardEl=document.createElement('div');cardEl.className='philosophy-card';cardEl.innerHTML=philosophyCard;
       document.getElementById('func-grid').insertAdjacentElement('beforebegin',cardEl);
-      fitOneLine(cardEl.querySelector('.ph-quote'));
+      const q=cardEl.querySelector('.ph-quote');
+      fitOneLine(q);
+      // Webフォントの読み込み後に幅が変わるため、読み込み完了後にも調整し直す
+      if(document.fonts&&document.fonts.ready)document.fonts.ready.then(function(){fitOneLine(q);});
+      setTimeout(function(){fitOneLine(q);},500);
     }
   }catch(e){console.error('理念カードの表示に失敗',e);}
 
@@ -559,8 +563,15 @@ function showConfirm(title,body,cb){
 }
 
 // ===== ログイン =====
+// 本人以外には名前を見せない役職（config.js の hiddenPositions。未設定なら管理者）
+const HIDDEN_POSITIONS=APP_CONFIG.hiddenPositions||['管理者'];
+// 管理者用URL（末尾に ?admin=1）で開いたときだけ、ログイン一覧に表示する
+const SHOW_HIDDEN_LOGIN=new URLSearchParams(location.search).has('admin');
+function isHiddenFor(s){
+  return HIDDEN_POSITIONS.includes(s.position)&&!(ME&&ME.id===s.id);
+}
 function showLoginModal(){
-  const active=students.filter(function(s){return s.is_active!==false;}).slice().sort(function(a,b){
+  const active=students.filter(function(s){return s.is_active!==false&&(SHOW_HIDDEN_LOGIN||!HIDDEN_POSITIONS.includes(s.position));}).slice().sort(function(a,b){
     const so=storeOrder(a.store)-storeOrder(b.store);if(so!==0)return so;
     const po=positionOrder(a.position)-positionOrder(b.position);if(po!==0)return po;
     return a.name<b.name?-1:1;
@@ -721,7 +732,7 @@ function renderStaffPage(){
   const storeF=document.getElementById('sf-store-filter').value;
   const posF=document.getElementById('sf-pos-filter').value;
   const showInactive=document.getElementById('sf-show-inactive').checked;
-  let list=students;
+  let list=students.filter(function(s){return !isHiddenFor(s);});
   if(!showInactive)list=list.filter(function(s){return s.is_active!==false;});
   if(storeF)list=list.filter(function(s){return s.store===storeF;});
   if(posF)list=list.filter(function(s){return s.position===posF;});
