@@ -134,10 +134,24 @@ function positionOrder(p) {
 }
 
 // ===== メニュー（全ページ共通） =====
+// 役職とは別に、人単位で「管理者と同じ全権限」を持つか
+// （studentsテーブルの permissions 列に 'admin' が入っている人）
+function isFullAccess(me) {
+  return !!me && Array.isArray(me.permissions) && me.permissions.includes('admin');
+}
+
+// 権限リスト（役職名の配列）に当てはまるか。全権限の人は「管理者」と同じ扱いにする
+function hasAccess(list, me) {
+  if (!me) return false;
+  const l = list || [];
+  if (l.includes(me.position)) return true;
+  return isFullAccess(me) && l.includes('管理者');
+}
+
 function canAccessMenu(m, me) {
   if (!me || m.comingSoon) return false;
   if (m.access === 'all') return true;
-  return (APP_CONFIG.roles[m.access] || []).includes(me.position);
+  return hasAccess(APP_CONFIG.roles[m.access], me);
 }
 
 // 上部タブのHTML（activeId: 'home' またはメニューのid）
