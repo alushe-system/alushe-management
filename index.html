@@ -416,7 +416,7 @@ const TAB_STYLE_OFF='font-family:"Noto Sans JP",sans-serif;font-size:14px;font-w
 
 function hash(s){let h=0;for(let i=0;i<s.length;i++)h=(Math.imul(31,h)+s.charCodeAt(i))|0;return String(h);}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-function hasRole(key){return !!ME&&(ROLES[key]||[]).includes(ME.position);}
+function hasRole(key){return hasAccess(ROLES[key],ME);}
 function nonAdminStudents(){return students.filter(function(s){return ROLES.currTarget.includes(s.position);});}
 
 let students=[],categories=[],curricula=[],progressRows=[];
