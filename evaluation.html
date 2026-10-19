@@ -374,7 +374,7 @@ async function saveAllEntries(){
 
 /* ===== 評価項目の編集 ===== */
 let adminItems=[];
-function canEditAdmin(){return !!ME&&EVAL_EDITOR_LIST.includes(ME.position);}
+function canEditAdmin(){return hasAccess(EVAL_EDITOR_LIST,ME);}
 
 function openAdminModal(){
   document.getElementById('admin-position').innerHTML=EVAL_TARGET_ROLES.map(function(p){return '<option value="'+esc(p)+'">'+esc(p)+'</option>';}).join('');
