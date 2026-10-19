@@ -189,7 +189,7 @@ let roleProductivity={},materialRatio={};
 
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function closeModal(id){document.getElementById(id).classList.remove('show');}
-function canEditSettings(){return !!ME&&APP_CONFIG.roles.salesSettings.includes(ME.position);}
+function canEditSettings(){return hasAccess(APP_CONFIG.roles.salesSettings,ME);}
 function yen(n){return '¥'+Math.round(n).toLocaleString();}
 function exTax(n){return '(税抜 '+yen(n/(1+TAX_RATE))+')';}
 
