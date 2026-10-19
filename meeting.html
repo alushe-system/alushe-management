@@ -537,7 +537,7 @@ async function renderInterviewList(){
 /* ===== 代表管理 ===== */
 let rnInlineEditId=null;
 window.__rnRows={};
-function canViewRepNotes(){return !!ME&&REP_NOTE_ROLES.includes(ME.position);}
+function canViewRepNotes(){return hasAccess(REP_NOTE_ROLES,ME);}
 // 個人に紐づかない記録の対象（店舗ごと・全店共通・その他）
 function rnSpecialTargets(){
   const list=APP_CONFIG.stores.map(function(s){return {key:'STORE:'+s.id,label:s.label+'全体',store:s.id};});
