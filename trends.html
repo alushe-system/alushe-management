@@ -51,11 +51,11 @@ body{background:var(--cream);font-family:'Noto Sans JP',sans-serif;color:var(--d
 
   <div id="store-filter"></div>
 
-  <div class="chart-card"><div class="chart-title">総売結果（税込・円）</div><div class="chart-wrap"><canvas id="chart-result"></canvas></div></div>
-  <div class="chart-card"><div class="chart-title">材料比率（%）</div><div class="chart-wrap"><canvas id="chart-material"></canvas></div></div>
-  <div class="chart-card"><div class="chart-title">総入客数（名）</div><div class="chart-wrap"><canvas id="chart-clients"></canvas></div></div>
+  <div class="chart-card"><div class="chart-title">総売上（税込・円）</div><div class="chart-wrap"><canvas id="chart-result"></canvas></div></div>
+  <div class="chart-card"><div class="chart-title">技術売上（税込・円）</div><div class="chart-wrap"><canvas id="chart-tech"></canvas></div></div>
   <div class="chart-card"><div class="chart-title">店販売上（税込・円）</div><div class="chart-wrap"><canvas id="chart-tanden"></canvas></div></div>
-  <div class="chart-card"><div class="chart-title">客単価（税込・円）</div><div class="chart-wrap"><canvas id="chart-unitprice"></canvas></div></div>
+  <div class="chart-card"><div class="chart-title">店販比率（%）</div><div class="chart-wrap"><canvas id="chart-tratio"></canvas></div></div>
+  <div class="chart-card"><div class="chart-title">新規再来（%）</div><div class="chart-wrap"><canvas id="chart-rnew"></canvas></div></div>
 </div>
 
 <script>
@@ -103,32 +103,23 @@ async function loadYearData(){
   document.getElementById('loading').style.display='none';
 }
 
+// 店舗の数字（事務所入力）から月ごとの値を出す
 function getMonthTotals(month){
   const ids=storesInFilter(currentStore);
   const rows=salesDataAll[month]||{};
-  let result=0,clients=0,tanden=0,techFree=0,any=false;
+  let tech=0,tanden=0,any=false;const rn=[];
   ids.forEach(function(id){
     const d=rows[id];if(!d)return;any=true;
-    result+=calcResult(d);
-    techFree+=Number(d.meimei_sales||0)+Number(d.free_sales||0);
-    clients+=Number(d.meimei_clients||0)+Number(d.free_clients||0);
-    tanden+=Number(d.tanden||0);
+    tech+=Number(d.tech_sales||0);tanden+=Number(d.tanden||0);
+    if(d.return_new!=null)rn.push(Number(d.return_new));
   });
-  // 材料比率：店舗ごとに（材料費があれば 材料費÷その店舗の総売、なければ入力された比率）出して平均
-  const mr=materialByMonth[month]||{};
-  const vals=[];
-  ids.forEach(function(id){
-    const r=mr[id];if(!r)return;
-    if(r.cost!=null){const res=rows[id]?calcResult(rows[id]):0;if(res)vals.push(Number(r.cost)/res*100);}
-    else if(r.ratio!=null)vals.push(Number(r.ratio));
-  });
-  const material=vals.length?Math.round(vals.reduce(function(a,b){return a+b;},0)/vals.length*10)/10:null;
+  const result=tech+tanden;
   return {
     result:any&&result?Math.round(result*(1+TAX_RATE)):null,
-    material:material,
-    clients:clients||null,
+    tech:tech?Math.round(tech*(1+TAX_RATE)):null,
     tanden:tanden?Math.round(tanden*(1+TAX_RATE)):null,
-    unitPrice:clients?Math.round(techFree*(1+TAX_RATE)/clients):null
+    tratio:result?Math.round(tanden/result*1000)/10:null,
+    rnew:rn.length?Math.round(rn.reduce(function(a,b){return a+b;},0)/rn.length*10)/10:null
   };
 }
 
@@ -147,11 +138,11 @@ function makeChart(id,label,values,color,isPercent){
 
 function renderCharts(){
   const totals=yearMonths().map(getMonthTotals);
-  makeChart('chart-result','総売結果',totals.map(function(t){return t.result;}),'#c9a96e',false);
-  makeChart('chart-material','材料比率',totals.map(function(t){return t.material;}),'#c0392b',true);
-  makeChart('chart-clients','総入客数',totals.map(function(t){return t.clients;}),'#2980b9',false);
+  makeChart('chart-result','総売上',totals.map(function(t){return t.result;}),'#c9a96e',false);
+  makeChart('chart-tech','技術売上',totals.map(function(t){return t.tech;}),'#8b5e3c',false);
   makeChart('chart-tanden','店販売上',totals.map(function(t){return t.tanden;}),'#4a7c59',false);
-  makeChart('chart-unitprice','客単価',totals.map(function(t){return t.unitPrice;}),'#8b5e3c',false);
+  makeChart('chart-tratio','店販比率',totals.map(function(t){return t.tratio;}),'#2980b9',true);
+  makeChart('chart-rnew','新規再来',totals.map(function(t){return t.rnew;}),'#c0392b',true);
 }
 
 (async function(){
