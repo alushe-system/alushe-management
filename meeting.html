@@ -246,22 +246,44 @@ function switchTab(name){
 
 /* ===== 月末報告 ===== */
 window.__moRows={};
+// 月末報告の項目（入力するタイミングごとにまとめて表示）
+//   key = 画面の部品名 / label = 見出し / ph = 入力欄のヒント
+const MO_SECTIONS=[
+  {title:'店長会議後3日以内に記入',items:[
+    {key:'plan',label:'目標',ph:'今月の目標（数字で）'},
+    {key:'do',label:'行動',ph:'目標のために何をするか'},
+    {key:'deadline',label:'期限（ToDo）',ph:'誰が・何を・いつまでに行うか'},
+  ]},
+  {title:'月末〜月初に記入',items:[
+    {key:'check',label:'反省',ph:'目標に対して結果はどうだったか・できなかった理由'},
+    {key:'action',label:'改善',ph:'来月どう変えるか'},
+  ]},
+  {title:'その他',items:[
+    {key:'other',label:'その他報告',ph:''},
+    {key:'auth',label:'その他権限要求',ph:''},
+  ]},
+];
+const MO_ITEMS=MO_SECTIONS.reduce(function(a,s){return a.concat(s.items);},[]);
 function moBlockHtml(store,i){
   const k='mo'+i;
   return '<div class="store-head">'+esc(storeLabel(store))+'</div>'
     +'<div class="card"><button class="prev-toggle" onclick="togglePrev(\''+k+'\')" id="'+k+'-prev-toggle">▼ 前月の内容を確認</button>'
     +'<div class="prev-compact" id="'+k+'-prev-box" style="display:none">'
-    +['plan:PLAN(目標)','do:DO(行動)','check:CHECK(反省)','action:ACTION(改善)','other:その他報告','auth:その他権限要求'].map(function(x){
-      const p=x.split(':');return '<div class="pf"><div class="pf-label">'+p[1]+'</div><div class="pf-body" id="'+k+'-prev-'+p[0]+'"></div></div>';
+    +MO_ITEMS.map(function(x){
+      return '<div class="pf"><div class="pf-label">'+x.label+'</div><div class="pf-body" id="'+k+'-prev-'+x.key+'"></div></div>';
     }).join('')
     +'</div></div>'
     +'<div class="card"><div class="card-title" id="'+k+'-cur-label">当月</div>'
-    +['plan:PLAN(目標)','do:DO(行動)','check:CHECK(反省)','action:ACTION(改善)','other:その他報告','auth:その他権限要求'].map(function(x){
-      const p=x.split(':');return '<div class="field"><label>'+p[1]+'</label><textarea class="txt" id="'+k+'-cur-'+p[0]+'"></textarea></div>';
+    +MO_SECTIONS.map(function(sec){
+      return '<div style="font-size:11px;font-weight:700;color:var(--gold, #c9a96e);letter-spacing:1px;margin:14px 0 6px">◆ '+sec.title+'</div>'
+        +sec.items.map(function(x){
+          return '<div class="field"><label>'+x.label+'</label><textarea class="txt" id="'+k+'-cur-'+x.key+'" placeholder="'+esc(x.ph)+'"></textarea></div>';
+        }).join('');
     }).join('')
     +'<div class="field"><label>添付ファイル</label><div id="'+k+'-attach-list"></div><input type="file" class="inp" id="'+k+'-attach-new" multiple></div>'
     +'<div class="save-row"><button class="btn btn-dark" onclick="saveMonthly('+i+')">'+esc(storeLabel(store))+'を保存</button></div></div>';
 }
+const MO_FIELDS={plan:'plan',do:'do_text',deadline:'deadline_text',check:'check_text',action:'action',other:'other_report',auth:'other_authority'};
 const MO_FIELDS={plan:'plan',do:'do_text',check:'check_text',action:'action',other:'other_report',auth:'other_authority'};
 function togglePrev(k){
   const box=document.getElementById(k+'-prev-box');
