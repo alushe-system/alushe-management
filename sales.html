@@ -265,34 +265,28 @@ function canViewAllStores(){
 //   店舗ごと × 全店舗・グループ   → 店舗の一覧（閲覧のみ）。店舗名をタップ → その店舗のスタッフへ
 //   スタッフごと × 全店舗・グループ → 範囲内のスタッフ全員（閲覧のみ）
 //   スタッフごと × 店舗1つ        → その店舗のスタッフ（入力できる）
-//   ※「店舗ごと × 店舗1つ」は1行だけになるので作らない（範囲の選択肢に店舗を出さない）
+//   ※範囲で店舗を1つ選んだときは、どちらの見かたでも「その店舗のスタッフ」になる
 let lastGroupScope='all';   // 店舗の一覧に戻るときの範囲
 function isAggregate(){return !isSingleStore(currentStore);}
 function isStoreList(){return viewMode==='store'&&isAggregate();}
-function groupScopes(){
-  return [{v:'all',t:'全店舗'}].concat(APP_CONFIG.storeGroups.map(function(g){return {v:'group:'+g.id,t:(g.short||g.label)+'全体'};}));
-}
 function renderScope(){
   const box=document.getElementById('scope-box');
   if(!canViewAllStores()){
     box.innerHTML='<span class="scope-fixed">'+esc(storeLabel(currentStore))+'</span>';
     return;
   }
+  // 見かたに関係なく同じ選択肢（全店舗 → グループ全体＋各店舗）
   let h='<select class="scope-sel" onchange="setScope(this.value)">';
-  if(viewMode==='store'){
-    groupScopes().forEach(function(o){h+='<option value="'+o.v+'"'+(currentStore===o.v?' selected':'')+'>'+o.t+'</option>';});
-  }else{
-    h+='<option value="all"'+(currentStore==='all'?' selected':'')+'>全店舗（全スタッフ）</option>';
-    APP_CONFIG.storeGroups.forEach(function(g){
-      const list=APP_CONFIG.stores.filter(function(x){return x.group===g.id;});
-      if(!list.length)return;
-      const name=g.short||g.label;
-      h+='<optgroup label="'+name+'">';
-      h+='<option value="group:'+g.id+'"'+(currentStore==='group:'+g.id?' selected':'')+'>'+name+'全体</option>';
-      list.forEach(function(x){h+='<option value="'+x.id+'"'+(currentStore===x.id?' selected':'')+'>'+x.label+'</option>';});
-      h+='</optgroup>';
-    });
-  }
+  h+='<option value="all"'+(currentStore==='all'?' selected':'')+'>全店舗</option>';
+  APP_CONFIG.storeGroups.forEach(function(g){
+    const list=APP_CONFIG.stores.filter(function(x){return x.group===g.id;});
+    if(!list.length)return;
+    const name=g.short||g.label;
+    h+='<optgroup label="'+name+'">';
+    h+='<option value="group:'+g.id+'"'+(currentStore==='group:'+g.id?' selected':'')+'>'+name+'全体</option>';
+    list.forEach(function(x){h+='<option value="'+x.id+'"'+(currentStore===x.id?' selected':'')+'>'+x.label+'</option>';});
+    h+='</optgroup>';
+  });
   box.innerHTML=h+'</select>';
 }
 function renderStatus(){
@@ -328,9 +322,11 @@ function setViewMode(m){
   sortField=null;
   renderView();renderTable();
 }
+// 範囲を選んだとき：店舗を1つ選んだら、どちらの見かたでもその店舗のスタッフ（入力できる画面）を表示
 function setScope(v){
+  if(isSingleStore(v)){switchStore(v);return;}
   currentStore=v;
-  if(isAggregate())lastGroupScope=v;
+  lastGroupScope=v;
   renderView();renderTable();
 }
 // 店舗の一覧で店舗名をタップ → その店舗のスタッフ（入力できる）
