@@ -91,41 +91,40 @@ function getStoreForMonth(s,month){return valueAsOf(assignHistory,s.id,'store',m
 async function loadYearData(){
   document.getElementById('loading').style.display='flex';
   const months=yearMonths();
+  // 店舗の数字（事務所入力：store_sales）で推移を出す
   const [sres,mres]=await Promise.all([
-    sb.from('sales_data').select('*').gte('month',months[0]).lte('month',months[11]),
+    sb.from('store_sales').select('*').gte('month',months[0]).lte('month',months[11]),
     sb.from('material_ratio').select('*').gte('month',months[0]).lte('month',months[11]),
   ]);
   salesDataAll={};materialByMonth={};
   months.forEach(function(m){salesDataAll[m]={};materialByMonth[m]={};});
-  (sres.data||[]).forEach(function(row){if(salesDataAll[row.month])salesDataAll[row.month][row.student_id]=row;});
-  (mres.data||[]).forEach(function(row){
-    if(materialByMonth[row.month]&&row.ratio!=null)materialByMonth[row.month][row.store]=Number(row.ratio);
-  });
+  (sres.data||[]).forEach(function(row){if(salesDataAll[row.month])salesDataAll[row.month][row.store]=row;});
+  (mres.data||[]).forEach(function(row){if(materialByMonth[row.month])materialByMonth[row.month][row.store]=row;});
   document.getElementById('loading').style.display='none';
 }
 
 function getMonthTotals(month){
-  let list=students.slice();
-  if(currentStore!=='all')list=list.filter(function(s){return storeFilterMatches(currentStore,getStoreForMonth(s,month));});
+  const ids=storesInFilter(currentStore);
   const rows=salesDataAll[month]||{};
-  let result=0,clients=0,tanden=0,techFree=0;
-  list.forEach(function(s){
-    const d=rows[s.id]||{};
+  let result=0,clients=0,tanden=0,techFree=0,any=false;
+  ids.forEach(function(id){
+    const d=rows[id];if(!d)return;any=true;
     result+=calcResult(d);
     techFree+=Number(d.meimei_sales||0)+Number(d.free_sales||0);
     clients+=Number(d.meimei_clients||0)+Number(d.free_clients||0);
     tanden+=Number(d.tanden||0);
   });
-  // 材料比率：店舗選択時はその店舗、全店舗は入力済み店舗の平均
+  // 材料比率：店舗ごとに（材料費があれば 材料費÷その店舗の総売、なければ入力された比率）出して平均
   const mr=materialByMonth[month]||{};
-  let material=null;
-  if(isSingleStore(currentStore)){material=mr[currentStore]!=null?mr[currentStore]:null;}
-  else{
-    const vals=storesInFilter(currentStore).map(function(id){return mr[id];}).filter(function(v){return v!=null;});
-    material=vals.length?vals.reduce(function(a,b){return a+b;},0)/vals.length:null;
-  }
+  const vals=[];
+  ids.forEach(function(id){
+    const r=mr[id];if(!r)return;
+    if(r.cost!=null){const res=rows[id]?calcResult(rows[id]):0;if(res)vals.push(Number(r.cost)/res*100);}
+    else if(r.ratio!=null)vals.push(Number(r.ratio));
+  });
+  const material=vals.length?Math.round(vals.reduce(function(a,b){return a+b;},0)/vals.length*10)/10:null;
   return {
-    result:result?Math.round(result*(1+TAX_RATE)):null,
+    result:any&&result?Math.round(result*(1+TAX_RATE)):null,
     material:material,
     clients:clients||null,
     tanden:tanden?Math.round(tanden*(1+TAX_RATE)):null,
