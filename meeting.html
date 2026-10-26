@@ -284,7 +284,6 @@ function moBlockHtml(store,i){
     +'<div class="save-row"><button class="btn btn-dark" onclick="saveMonthly('+i+')">'+esc(storeLabel(store))+'を保存</button></div></div>';
 }
 const MO_FIELDS={plan:'plan',do:'do_text',deadline:'deadline_text',check:'check_text',action:'action',other:'other_report',auth:'other_authority'};
-const MO_FIELDS={plan:'plan',do:'do_text',check:'check_text',action:'action',other:'other_report',auth:'other_authority'};
 function togglePrev(k){
   const box=document.getElementById(k+'-prev-box');
   const open=box.style.display!=='none';
