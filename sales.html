@@ -76,11 +76,24 @@ tbody tr:hover td:first-child{background:#fffbf7;}
 .btn{font-family:'Noto Sans JP',sans-serif;font-size:13px;font-weight:500;padding:8px 16px;border-radius:7px;border:none;cursor:pointer;}
 .btn-dark{background:var(--dark);color:white;}
 .btn-ghost{background:#ede8e2;color:var(--mid);}
-/* 店舗別／個人別の切り替え */
-.view-toggle{display:flex;gap:8px;margin-bottom:10px;align-items:center;flex-wrap:wrap;}
-.view-toggle .vt-btn{font-family:'Noto Sans JP',sans-serif;font-size:12px;font-weight:700;padding:6px 16px;border-radius:20px;border:2px solid var(--gold-light);background:white;color:var(--mid);cursor:pointer;}
-.view-toggle .vt-btn.active{background:var(--dark);color:var(--gold-light);border-color:var(--dark);}
-.view-note{font-size:11px;color:var(--mid);}
+/* 表示の切り替え（月・見かた・範囲を1枚のカードにまとめる） */
+.ctrl-card{background:white;border:1px solid var(--gold-light);border-radius:12px;padding:14px 16px;margin-bottom:14px;}
+.ctrl-row{display:flex;align-items:center;gap:10px 14px;flex-wrap:wrap;}
+.ctrl-row+.ctrl-row{margin-top:12px;}
+.ctrl-group{display:flex;align-items:center;gap:8px;}
+.ctrl-label{font-size:12px;color:var(--mid);font-weight:500;white-space:nowrap;}
+.ctrl-tools{border-top:1px solid #f0e8dc;padding-top:12px;}
+.seg{display:inline-flex;border:2px solid var(--dark);border-radius:22px;overflow:hidden;}
+.seg button{font-family:'Noto Sans JP',sans-serif;font-size:13px;font-weight:700;padding:7px 18px;border:none;background:white;color:var(--dark);cursor:pointer;white-space:nowrap;}
+.seg button.active{background:var(--dark);color:var(--gold-light);}
+.scope-sel{font-family:'Noto Sans JP',sans-serif;font-size:14px;font-weight:700;padding:8px 34px 8px 14px;border-radius:9px;border:2px solid var(--gold);outline:none;cursor:pointer;color:var(--dark);background:white url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='7'%3E%3Cpath d='M0 0l6 7 6-7z' fill='%23c9a96e'/%3E%3C/svg%3E") no-repeat right 12px center;appearance:none;-webkit-appearance:none;min-width:150px;}
+.scope-fixed{font-size:14px;font-weight:700;}
+.status-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--mid);background:#f5f0eb;border-radius:8px;padding:8px 12px;margin-bottom:12px;}
+.status-bar.editable{background:#eef5f0;color:#2f5a3c;}
+.status-bar b{color:var(--dark);}
+.back-btn{font-family:'Noto Sans JP',sans-serif;font-size:12px;font-weight:700;padding:5px 12px;border-radius:7px;border:1.5px solid var(--soft);background:white;color:var(--dark);cursor:pointer;white-space:nowrap;}
+.total-panel-label span{color:var(--soft);letter-spacing:1px;margin-left:8px;}
+.store-badge{display:block;font-size:9px;font-weight:400;color:var(--mid);margin-top:1px;}
 .store-link{background:none;border:none;font-family:'Noto Sans JP',sans-serif;font-size:12px;font-weight:700;color:var(--accent);cursor:pointer;padding:0;text-decoration:underline;text-underline-offset:3px;}
 tr.sum-row td{background:#f5f0eb;font-weight:700;}
 tr.sum-row td:first-child{background:#f5f0eb;}
@@ -137,25 +150,43 @@ tr.sum-row td:first-child{background:#f5f0eb;}
 </div>
 
 <div class="main">
-  <!-- 3段目：数値管理の項目 -->
-  <div class="sub-bar">
-    <label>対象月</label>
-    <button class="month-nav-btn" onclick="shiftMonth(-1)">◀</button>
-    <select class="month-sel" id="month-sel" onchange="onMonthChange()"></select>
-    <button class="month-nav-btn" onclick="shiftMonth(1)">▶</button>
-    <button class="sub-btn" onclick="showAddModal()">＋ 月を追加</button>
-    <button class="sub-btn" id="btn-productivity" onclick="showProductivityModal()" style="display:none">📊 役職別基準値</button>
-    <button class="sub-btn" id="btn-material" onclick="showMaterialModal()" style="display:none">🧾 材料比率</button>
-    <button class="sub-btn" onclick="location.href='trends.html'">📈 年間推移</button>
-    <button class="sub-btn" onclick="location.href='compare.html'">🏪 店舗比較</button>
+  <!-- 3段目：何を見るか（月・見かた・範囲）をここにまとめる -->
+  <div class="ctrl-card">
+    <div class="ctrl-row">
+      <div class="ctrl-group">
+        <span class="ctrl-label">対象月</span>
+        <button class="month-nav-btn" onclick="shiftMonth(-1)">◀</button>
+        <select class="month-sel" id="month-sel" onchange="onMonthChange()"></select>
+        <button class="month-nav-btn" onclick="shiftMonth(1)">▶</button>
+      </div>
+    </div>
+    <div class="ctrl-row" id="view-row">
+      <div class="ctrl-group" id="mode-group">
+        <span class="ctrl-label">見かた</span>
+        <div class="seg">
+          <button id="mode-store" onclick="setViewMode('store')">🏪 店舗ごと</button>
+          <button id="mode-person" onclick="setViewMode('person')">👤 スタッフごと</button>
+        </div>
+      </div>
+      <div class="ctrl-group">
+        <span class="ctrl-label">範囲</span>
+        <div id="scope-box"></div>
+      </div>
+    </div>
+    <div class="ctrl-row ctrl-tools">
+      <button class="sub-btn" onclick="showAddModal()">＋ 月を追加</button>
+      <button class="sub-btn" id="btn-productivity" onclick="showProductivityModal()" style="display:none">📊 役職別基準値</button>
+      <button class="sub-btn" id="btn-material" onclick="showMaterialModal()" style="display:none">🧾 材料比率</button>
+      <button class="sub-btn" onclick="location.href='trends.html'">📈 年間推移</button>
+      <button class="sub-btn" onclick="location.href='compare.html'">🏪 店舗比較（月別）</button>
+    </div>
   </div>
 
-  <!-- 店舗の切り替え（グループボタン＋店舗プルダウン）：config.js の共通部品 -->
-  <div id="store-filter"></div>
-  <div id="readonly-note" style="display:none;font-size:12px;color:var(--mid);background:#f5f0eb;border-radius:8px;padding:8px 12px;margin-bottom:12px">集計表示中のため、入力はできません。入力するときは店舗を1つ選んでください。</div>
+  <!-- いま何を表示しているか・入力できるか -->
+  <div class="status-bar" id="status-bar"></div>
 
   <div class="total-panel">
-    <div class="total-panel-label" id="total-label">✦ 店舗合計</div>
+    <div class="total-panel-label" id="total-label">✦ 合計</div>
     <div class="total-grid">
       <div class="total-item"><div class="total-item-label">総売目標</div><div class="total-item-val" id="tot-target">—</div><div class="total-item-sub" id="tot-target-sub"></div></div>
       <div class="total-item"><div class="total-item-label">総売結果</div><div class="total-item-val" id="tot-result">—</div><div class="total-item-sub" id="tot-result-sub"></div></div>
@@ -170,12 +201,6 @@ tr.sum-row td:first-child{background:#f5f0eb;}
       <div class="total-item"><div class="total-item-label">材料費</div><div class="total-item-val" id="tot-cost">—</div><div class="total-item-sub" id="tot-cost-sub"></div></div>
       <div class="total-item"><div class="total-item-label">材料比率</div><div class="total-item-val" id="tot-material">—</div><div class="total-item-sub" id="tot-material-sub"></div></div>
     </div>
-  </div>
-
-  <div class="view-toggle" id="view-toggle" style="display:none">
-    <button class="vt-btn" id="vt-store" onclick="setViewMode('store')">🏪 店舗別</button>
-    <button class="vt-btn" id="vt-person" onclick="setViewMode('person')">👤 個人別</button>
-    <span class="view-note" id="view-note"></span>
   </div>
 
   <p class="scroll-hint">← 横にスクロールできます →</p>
@@ -235,33 +260,94 @@ function canViewAllStores(){
   return hasAccess(list,ME);
 }
 
-// ===== 店舗の切り替え =====
+// ===== 表示の切り替え =====
+// 見かた（店舗ごと／スタッフごと）× 範囲（全店舗・グループ全体・店舗1つ）で、4つの見え方になる
+//   店舗ごと × 全店舗・グループ   → 店舗の一覧（閲覧のみ）。店舗名をタップ → その店舗のスタッフへ
+//   スタッフごと × 全店舗・グループ → 範囲内のスタッフ全員（閲覧のみ）
+//   スタッフごと × 店舗1つ        → その店舗のスタッフ（入力できる）
+//   ※「店舗ごと × 店舗1つ」は1行だけになるので作らない（範囲の選択肢に店舗を出さない）
+let lastGroupScope='all';   // 店舗の一覧に戻るときの範囲
 function isAggregate(){return !isSingleStore(currentStore);}
-function renderStoreTabs(){
-  if(canViewAllStores()){
-    renderStoreFilter('store-filter',currentStore,switchStore);
-  }else{
-    const el=document.getElementById('store-filter');
-    el.className='';
-    el.innerHTML='<div class="store-fixed">'+esc(storeLabel(currentStore))+'</div>';
+function isStoreList(){return viewMode==='store'&&isAggregate();}
+function groupScopes(){
+  return [{v:'all',t:'全店舗'}].concat(APP_CONFIG.storeGroups.map(function(g){return {v:'group:'+g.id,t:(g.short||g.label)+'全体'};}));
+}
+function renderScope(){
+  const box=document.getElementById('scope-box');
+  if(!canViewAllStores()){
+    box.innerHTML='<span class="scope-fixed">'+esc(storeLabel(currentStore))+'</span>';
+    return;
   }
-  document.getElementById('total-label').textContent='✦ '+storeFilterLabel(currentStore)+' 合計';
-  renderViewToggle();
+  let h='<select class="scope-sel" onchange="setScope(this.value)">';
+  if(viewMode==='store'){
+    groupScopes().forEach(function(o){h+='<option value="'+o.v+'"'+(currentStore===o.v?' selected':'')+'>'+o.t+'</option>';});
+  }else{
+    h+='<option value="all"'+(currentStore==='all'?' selected':'')+'>全店舗（全スタッフ）</option>';
+    APP_CONFIG.storeGroups.forEach(function(g){
+      const list=APP_CONFIG.stores.filter(function(x){return x.group===g.id;});
+      if(!list.length)return;
+      const name=g.short||g.label;
+      h+='<optgroup label="'+name+'">';
+      h+='<option value="group:'+g.id+'"'+(currentStore==='group:'+g.id?' selected':'')+'>'+name+'全体</option>';
+      list.forEach(function(x){h+='<option value="'+x.id+'"'+(currentStore===x.id?' selected':'')+'>'+x.label+'</option>';});
+      h+='</optgroup>';
+    });
+  }
+  box.innerHTML=h+'</select>';
 }
-function renderViewToggle(){
-  const agg=isAggregate();
-  document.getElementById('view-toggle').style.display=agg?'':'none';
-  document.getElementById('vt-store').classList.toggle('active',viewMode==='store');
-  document.getElementById('vt-person').classList.toggle('active',viewMode==='person');
-  document.getElementById('view-note').textContent=viewMode==='store'?'店舗名をタップすると、その店舗の個人入力に切り替わります':'';
-  document.getElementById('readonly-note').style.display=(agg&&viewMode==='person')?'':'none';
+function renderStatus(){
+  const el=document.getElementById('status-bar');
+  const scope=storeFilterLabel(currentStore);
+  el.classList.remove('editable');
+  if(isStoreList()){
+    el.innerHTML='<span><b>'+esc(scope)+'</b>の店舗ごとの数字（閲覧のみ）</span><span>店舗名をタップすると、その店舗のスタッフの数字を見る・入力できます</span>';
+  }else if(isAggregate()){
+    el.innerHTML='<span><b>'+esc(scope)+'</b>のスタッフ全員（閲覧のみ）</span><span>入力するときは「範囲」で店舗を1つ選んでください</span>';
+  }else{
+    el.classList.add('editable');
+    const back=canViewAllStores()?'<button class="back-btn" onclick="backToStoreList()">← 店舗の一覧に戻る</button>':'';
+    el.innerHTML=back+'<span>✏️ <b>'+esc(scope)+'</b>のスタッフ — 入力できます（自動保存）</span>';
+  }
 }
+function renderView(){
+  document.getElementById('view-row').style.display=canViewAllStores()?'':'none';
+  document.getElementById('mode-store').classList.toggle('active',viewMode==='store');
+  document.getElementById('mode-person').classList.toggle('active',viewMode==='person');
+  renderScope();
+  renderStatus();
+  const m=currentMonth.split('-');
+  document.getElementById('total-label').innerHTML='✦ '+esc(storeFilterLabel(currentStore))+' 合計'+(m.length===2?'<span>'+m[0]+'年'+parseInt(m[1])+'月</span>':'');
+}
+// 互換：以前の呼び出し名
+function renderStoreTabs(){renderView();}
+function setViewMode(m){
+  if(m===viewMode)return;
+  viewMode=m;
+  // 店舗ごとに切り替えたとき、店舗1つを選んでいたら、その店舗のグループ（なければ全店舗）に戻す
+  if(m==='store'&&!isAggregate())currentStore=lastGroupScope;
+  sortField=null;
+  renderView();renderTable();
+}
+function setScope(v){
+  currentStore=v;
+  if(isAggregate())lastGroupScope=v;
+  renderView();renderTable();
+}
+// 店舗の一覧で店舗名をタップ → その店舗のスタッフ（入力できる）
 function switchStore(store){
+  if(isAggregate())lastGroupScope=currentStore;
   currentStore=store;
-  if(isAggregate())viewMode='store';
-  renderStoreTabs();renderTable();
+  if(isSingleStore(store))viewMode='person';
+  sortField=null;
+  renderView();renderTable();
+  window.scrollTo({top:0,behavior:'smooth'});
 }
-function setViewMode(m){viewMode=m;renderViewToggle();renderTable();}
+function backToStoreList(){
+  viewMode='store';
+  currentStore=lastGroupScope;
+  sortField=null;
+  renderView();renderTable();
+}
 // 入力できるか：店舗を1つ選んでいるとき。ただし全店共通の人（どの店舗にも属さない）は全店舗表示で入力できる
 function canInputRow(s){
   return isSingleStore(currentStore)||!isSingleStore(getStoreForMonth(s,currentMonth));
@@ -313,6 +399,7 @@ function shiftMonth(delta){
 async function onMonthChange(){
   currentMonth=document.getElementById('month-sel').value;
   await Promise.all([loadSalesData(),loadProductivity(),loadMaterialRatio()]);
+  renderView();
   renderTable();
 }
 
@@ -323,9 +410,13 @@ function getStoreForMonth(s,month){
 function getStaffList(){
   let list=students.slice();
   if(currentStore!=='all')list=list.filter(function(s){return storeFilterMatches(currentStore,getStoreForMonth(s,currentMonth));});
+  // 複数店舗を並べるときは「店舗順 → 役職順」、店舗1つのときは役職順
+  const byStore=isAggregate();
   return list.sort(function(a,b){
+    const so=storeOrder(getStoreForMonth(a,currentMonth))-storeOrder(getStoreForMonth(b,currentMonth));
+    if(byStore&&so!==0)return so;
     const po=positionOrder(a.position)-positionOrder(b.position);if(po!==0)return po;
-    return storeOrder(getStoreForMonth(a,currentMonth))-storeOrder(getStoreForMonth(b,currentMonth));
+    return so;
   });
 }
 function techOf(d){return Number(d.meimei_sales||0)+Number(d.free_sales||0);}
@@ -419,7 +510,8 @@ function renderTable(){
     const d=salesData[s.id]||{};
     const dis=canInputRow(s)?'':' disabled';
     const auto=autoCells(d,targetOf(s),s.id);
-    let row='<tr><td>'+esc(s.name)+'<span class="pos-badge">'+esc(s.position||'')+'</span></td>';
+    const storeTag=isAggregate()?'<span class="store-badge">'+esc(storeLabel(getStoreForMonth(s,currentMonth)))+'</span>':'';
+    let row='<tr><td>'+esc(s.name)+'<span class="pos-badge">'+esc(s.position||'')+'</span>'+storeTag+'</td>';
     COLUMNS.forEach(function(c){
       if(c.auto){row+=auto[c.f];return;}
       if(c.select){row+='<td><select class="tbl-sel" data-sid="'+s.id+'" data-f="'+c.f+'"'+dis+'>'+numOpts(20,d[c.f])+'</select></td>';return;}
@@ -635,8 +727,10 @@ document.querySelectorAll('.modal-overlay').forEach(function(el){
   const thisMonth=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0');
   currentMonth=months.includes(thisMonth)?thisMonth:months[0];
   document.getElementById('month-sel').value=currentMonth;
+  // 最初の表示：店舗に所属している人は自分の店舗のスタッフ（入力できる画面）、全店共通の人は店舗の一覧
   currentStore=defaultStoreFilter(ME);
-  renderStoreTabs();
+  viewMode=isSingleStore(currentStore)?'person':'store';
+  renderView();
   await onMonthChange();
   document.getElementById('loading').style.display='none';
 })();
