@@ -189,18 +189,14 @@ tr.sum-row td:first-child{background:#f5f0eb;}
     <div class="total-panel-label" id="total-label">✦ 合計</div>
     <div id="tot-note" style="font-size:11px;color:var(--soft);margin:-4px 0 10px"></div>
     <div class="total-grid">
-      <div class="total-item"><div class="total-item-label">総売目標</div><div class="total-item-val" id="tot-target">—</div><div class="total-item-sub" id="tot-target-sub"></div></div>
-      <div class="total-item"><div class="total-item-label">総売結果</div><div class="total-item-val" id="tot-result">—</div><div class="total-item-sub" id="tot-result-sub"></div></div>
+      <div class="total-item"><div class="total-item-label">総売上</div><div class="total-item-val" id="tot-result">—</div><div class="total-item-sub" id="tot-result-sub"></div></div>
       <div class="total-item"><div class="total-item-label">技術売上</div><div class="total-item-val" id="tot-tech">—</div><div class="total-item-sub" id="tot-tech-sub"></div></div>
-      <div class="total-item"><div class="total-item-label">指名技術売上</div><div class="total-item-val" id="tot-meimei">—</div><div class="total-item-sub" id="tot-meimei-sub"></div></div>
-      <div class="total-item"><div class="total-item-label">フリー売上</div><div class="total-item-val" id="tot-free">—</div><div class="total-item-sub" id="tot-free-sub"></div></div>
-      <div class="total-item"><div class="total-item-label">総入客数</div><div class="total-item-val" id="tot-clients">—</div></div>
       <div class="total-item"><div class="total-item-label">店販売上</div><div class="total-item-val" id="tot-tanden">—</div><div class="total-item-sub" id="tot-tanden-sub"></div></div>
-      <div class="total-item"><div class="total-item-label">店販比率</div><div class="total-item-val" id="tot-tratio">—</div></div>
       <div class="total-item"><div class="total-item-label">ミルボンID</div><div class="total-item-val" id="tot-milbon">—</div></div>
-      <div class="total-item"><div class="total-item-label">チケット販売</div><div class="total-item-val" id="tot-ticket">—</div></div>
+      <div class="total-item"><div class="total-item-label">チケット販売枚数</div><div class="total-item-val" id="tot-ticket">—</div></div>
+      <div class="total-item"><div class="total-item-label">店販比率</div><div class="total-item-val" id="tot-tratio">—</div></div>
+      <div class="total-item"><div class="total-item-label">新規再来</div><div class="total-item-val" id="tot-rnew">—</div><div class="total-item-sub" id="tot-rnew-sub"></div></div>
       <div class="total-item"><div class="total-item-label">材料費</div><div class="total-item-val" id="tot-cost">—</div><div class="total-item-sub" id="tot-cost-sub"></div></div>
-      <div class="total-item"><div class="total-item-label">材料比率</div><div class="total-item-val" id="tot-material">—</div><div class="total-item-sub" id="tot-material-sub"></div></div>
     </div>
   </div>
 
@@ -232,12 +228,14 @@ const COLUMNS=[
   {f:'return_new',label:'再来率新規',pct:true},
   {f:'return_reg',label:'再来率顧客',pct:true},
   {f:'tanden',label:'店販売上'},
-  {f:'tanden_ratio',label:'店販比率',auto:true},
+  {f:'tanden_ratio',label:'店販比率',auto:true,storeOnly:true},   // 店舗の数字だけ（個人には紐づかない）
   {f:'milbon_id',label:'ミルボンID',int:true},
   {f:'ticket_count',label:'チケット販売枚数',int:true},
   {f:'late',label:'遅刻数',select:true,int:true},
 ];
 const INPUT_FIELDS=COLUMNS.filter(function(c){return !c.auto;}).map(function(c){return c.f;});
+// いまの表示で使う列（店舗の一覧は STORE_COLUMNS、スタッフの表は storeOnly を外した COLUMNS）
+function viewColumns(){return isStoreList()?STORE_COLUMNS:COLUMNS.filter(function(c){return !c.storeOnly;});}
 
 let ME=null,students=[],salesData={},currentMonth='',currentStore='all',months=[];
 let assignHistory=[],sortField=null,sortAsc=true;
@@ -359,7 +357,7 @@ function canInputRow(s){
 function renderHead(){
   const first=(isAggregate()&&viewMode==='store')?'店舗':'役職順';
   let h='<th><div class="th-inner left"><button class="sb-asc" id="sb-reset-asc" onclick="sortBy(\'reset\',true)">▲</button><span>'+first+'</span><button class="sb-desc" id="sb-reset-desc" onclick="sortBy(\'reset\',false)">▼</button></div></th>';
-  COLUMNS.forEach(function(c){
+  viewColumns().forEach(function(c){
     h+='<th><div class="th-inner"><button class="sb-asc" id="sb-'+c.f+'-asc" onclick="sortBy(\''+c.f+'\',true)">▲</button><span class="th-label">'+c.label+'</span><button class="sb-desc" id="sb-'+c.f+'-desc" onclick="sortBy(\''+c.f+'\',false)">▼</button></div></th>';
   });
   document.getElementById('sales-head').innerHTML=h;
@@ -448,37 +446,47 @@ function membersOfStore(storeId){
 }
 
 // ===== 店舗の数字（事務所入力：store_sales テーブル） =====
-// 店舗の一覧・合計パネル・材料比率は、スタッフの合計ではなくこの数字を使う。
-// スタッフの合計は「スタッフ計」として参考に並べて表示し、差があれば分かるようにする。
-const STORE_FIELDS=['meimei_sales','meimei_clients','free_clients','free_sales','return_new','return_reg','tanden','milbon_id','ticket_count'];
+// 店舗の項目は会議のスプレッドシートに合わせる（個人の項目とは別）
+//   総売上・店販比率は自動計算（総売上＝技術売上＋店販売上）。材料費は material_ratio に保存
+const STORE_COLUMNS=[
+  {f:'result',label:'総売上',auto:true},
+  {f:'tech_sales',label:'技術売上'},
+  {f:'tanden',label:'店販売上'},
+  {f:'milbon_id',label:'ミルボンID',int:true},
+  {f:'ticket_count',label:'チケット販売枚数',int:true},
+  {f:'tanden_ratio',label:'店販比率',auto:true},
+  {f:'return_new',label:'新規再来',pct:true},
+  {f:'cost',label:'材料費',material:true},
+];
+const STORE_FIELDS=['tech_sales','tanden','milbon_id','ticket_count','return_new'];
 let storeSales={};   // storeSales[店舗id] = { 各項目, db_id }
 function canEditStoreSales(){return hasAccess(APP_CONFIG.roles.storeSalesEditor||['代表取締役','管理者'],ME);}
-function targetOfStore(storeId){return membersOfStore(storeId).reduce(function(t,s){return t+targetOf(s);},0);}
-// 1店舗の数字（未入力なら空＝すべて「—」表示）
+// 1店舗の数字。技術売上を meimei_sales に入れておくと、総売上・店販比率の計算を個人と共通で使える
 function storeFig(storeId){
   const r=storeSales[storeId]||{};
-  const d={_target:targetOfStore(storeId),_entered:!!storeSales[storeId]};
-  STORE_FIELDS.forEach(function(f){
-    const pct=(f==='return_new'||f==='return_reg');
-    d[f]=r[f]==null?(pct?null:0):Number(r[f]);
-  });
-  d.unit_price=unitPriceOf(d);
+  const d={_entered:!!storeSales[storeId]||materialCost[storeId]!=null};
+  d.tech_sales=Number(r.tech_sales||0);
+  d.tanden=Number(r.tanden||0);
+  d.milbon_id=Number(r.milbon_id||0);
+  d.ticket_count=Number(r.ticket_count||0);
+  d.return_new=r.return_new==null?null:Number(r.return_new);
+  d.cost=materialCost[storeId]==null?null:Number(materialCost[storeId]);
+  d.meimei_sales=d.tech_sales;d.free_sales=0;
   return d;
 }
-// 複数店舗の合計（再来率は入力のある店舗の平均）
+// 複数店舗の合計（新規再来は入力のある店舗の平均、材料費は入力のある店舗の合計）
 function sumStoreFigs(ids){
-  const a={_target:0,_entered:false};
-  const rn=[],rr=[];
-  STORE_FIELDS.forEach(function(f){if(f!=='return_new'&&f!=='return_reg')a[f]=0;});
+  const a={_entered:false,tech_sales:0,tanden:0,milbon_id:0,ticket_count:0,cost:null,_costN:0};
+  const rn=[];
   ids.forEach(function(id){
     const d=storeFig(id);
-    a._target+=d._target;a._entered=a._entered||d._entered;
-    STORE_FIELDS.forEach(function(f){if(f!=='return_new'&&f!=='return_reg')a[f]+=d[f];});
+    a._entered=a._entered||d._entered;
+    ['tech_sales','tanden','milbon_id','ticket_count'].forEach(function(f){a[f]+=d[f];});
     if(d.return_new!=null)rn.push(d.return_new);
-    if(d.return_reg!=null)rr.push(d.return_reg);
+    if(d.cost!=null){a.cost=(a.cost||0)+d.cost;a._costN++;}
   });
-  a.return_new=avg1(rn);a.return_reg=avg1(rr);
-  a.unit_price=unitPriceOf(a);
+  a.return_new=avg1(rn);
+  a.meimei_sales=a.tech_sales;a.free_sales=0;
   return a;
 }
 async function loadStoreSales(){
@@ -493,6 +501,12 @@ async function loadStoreSales(){
 async function saveStoreSales(storeId,field,val){
   const {error}=await sb.from('store_sales').upsert(
     {month:currentMonth,store:storeId,[field]:val,updated_at:new Date().toISOString()},
+    {onConflict:'month,store'});
+  if(error)alert('保存に失敗しました: '+error.message);
+}
+async function saveStoreCost(storeId,val){
+  const {error}=await sb.from('material_ratio').upsert(
+    {month:currentMonth,store:storeId,cost:val,updated_at:new Date().toISOString()},
     {onConflict:'month,store'});
   if(error)alert('保存に失敗しました: '+error.message);
 }
@@ -551,7 +565,7 @@ function autoCells(d,target,sid){
 function renderTable(){
   renderHead();
   const tb=document.getElementById('sales-tbody');
-  const colspan=COLUMNS.length+1;
+  const colspan=viewColumns().length+1;
   if(isAggregate()&&viewMode==='store'){renderStoreTable(tb,colspan);updateTotals();return;}
   const list=sortList(getStaffList(),function(s){return salesData[s.id]||{};},targetOf);
   if(!list.length){tb.innerHTML='<tr><td colspan="'+colspan+'" class="empty-msg">対象スタッフがいません</td></tr>';updateTotals();return;}
@@ -561,7 +575,7 @@ function renderTable(){
     const auto=autoCells(d,targetOf(s),s.id);
     const storeTag=isAggregate()?'<span class="store-badge">'+esc(storeLabel(getStoreForMonth(s,currentMonth)))+'</span>':'';
     let row='<tr><td>'+esc(s.name)+'<span class="pos-badge">'+esc(s.position||'')+'</span>'+storeTag+'</td>';
-    COLUMNS.forEach(function(c){
+    viewColumns().forEach(function(c){
       if(c.auto){row+=auto[c.f];return;}
       if(c.select){row+='<td><select class="tbl-sel" data-sid="'+s.id+'" data-f="'+c.f+'"'+dis+'>'+numOpts(20,d[c.f])+'</select></td>';return;}
       const val=d[c.f]==null?'':d[c.f];
@@ -592,62 +606,55 @@ function refreshRowAuto(sid){
     document.getElementById(p[0]+'-'+sid).textContent=v?inTax(v).toLocaleString():'—';
     document.getElementById(p[0]+'-'+sid+'-sub').textContent=v?'(税抜 '+Math.round(v).toLocaleString()+')':'';
   });
-  document.getElementById('tratio-'+sid).textContent=ratioText(d);
+  const tr=document.getElementById('tratio-'+sid);if(tr)tr.textContent=ratioText(d);
 }
 
 // 店舗の一覧の表。入力権限のある人（事務所）は店舗の数字を直接入力できる。最後に合計行を付ける
-// 自動計算：総売目標（スタッフの役職別基準値の合計）・総売結果・技術売上・客単価・店販比率
 function staffNoteHtml(r){
   const sr=calcResult(r.staff);
   if(!sr&&!r.d._entered)return '';
   let h='スタッフ計 '+(sr?inTax(sr).toLocaleString():'—');
-  if(r.d._entered&&sr){
-    const diff=inTax(calcResult(r.d))-inTax(sr);
+  const res=calcResult(r.d);
+  if(res&&sr){
+    const diff=inTax(res)-inTax(sr);
     if(diff!==0)h+=' <span style="color:var(--red)">差 '+(diff>0?'+':'')+diff.toLocaleString()+'</span>';
     else h+=' <span style="color:var(--green)">一致</span>';
   }
   return '<span class="store-badge" id="staffnote-'+r.key+'">'+h+'</span>';
 }
-function storeDisplayCell(c,d){
+// 表示だけのセル（金額は税込の大きい数字＋税抜の小さい数字）
+function storeValueCell(c,d,key){
+  const id=key?' id="'+c.f+'-'+key+'"':'';
+  if(c.f==='result')return moneyCell(calcResult(d),key?'result-'+key:null);
+  if(c.f==='tanden_ratio')return '<td><span class="auto-val"'+(key?' id="tratio-'+key+'"':'')+'>'+ratioText(d)+'</span></td>';
   const v=d[c.f];
-  let t='—';
-  if(c.pct)t=v!=null?Number(v).toFixed(1)+'%':'—';
-  else if(c.int)t=v?Number(v).toLocaleString():'—';
-  else t=v?Math.round(v).toLocaleString():'—';
-  return '<td><span class="auto-val">'+t+'</span></td>';
+  if(c.pct)return '<td><span class="auto-val"'+id+'>'+(v!=null?Number(v).toFixed(1)+'%':'—')+'</span></td>';
+  if(c.int)return '<td><span class="auto-val"'+id+'>'+(v?Number(v).toLocaleString():'—')+'</span></td>';
+  if(c.material)return '<td><span class="auto-val"'+id+'>'+(v!=null?Math.round(v).toLocaleString():'—')+'</span><span class="auto-val-sub">'+(v!=null?'(税抜)':'')+'</span></td>';
+  return moneyCell(v,null);
 }
 function storeRowHtml(r,editable){
   const d=r.d,key=r.key;
-  const auto=autoCells(d,d._target,key);
   let row='<tr><td><button class="store-link" onclick="switchStore(\''+esc(r.id)+'\')">'+esc(r.label)+'</button><span class="pos-badge">'+r.count+'名</span>'+staffNoteHtml(r)+'</td>';
-  COLUMNS.forEach(function(c){
-    if(c.auto){row+=auto[c.f];return;}
-    if(c.f==='late'){row+='<td><span class="auto-val">—</span></td>';return;}
-    if(c.f==='unit_price'){row+='<td><span class="auto-val" id="unit-'+key+'">'+(d.unit_price?d.unit_price.toLocaleString():'—')+'</span></td>';return;}
-    if(!editable){row+=storeDisplayCell(c,d);return;}
-    const raw=(storeSales[r.id]||{})[c.f];
+  STORE_COLUMNS.forEach(function(c){
+    if(c.auto||!editable){row+=storeValueCell(c,d,key);return;}
+    const raw=c.material?materialCost[r.id]:(storeSales[r.id]||{})[c.f];
     const val=raw==null?'':raw;
     const ph=c.pct?'0.0':'0';
     const step=c.pct?' step="0.1"':(c.int?' step="1" inputmode="numeric"':'');
-    row+='<td><input type="number" class="num-inp'+(c.pct?' pct':'')+'" data-store="'+esc(r.id)+'" data-key="'+key+'" data-f="'+c.f+'" placeholder="'+ph+'"'+step+' value="'+esc(val)+'"></td>';
+    row+='<td><input type="number" class="num-inp'+(c.pct?' pct':'')+'" data-store="'+esc(r.id)+'" data-key="'+key+'" data-f="'+c.f+'"'+(c.material?' data-mat="1"':'')+' placeholder="'+ph+'"'+step+' value="'+esc(val)+'"></td>';
   });
   return row+'</tr>';
 }
 function storeSumRowHtml(){
   const d=sumStoreFigs(storesInFilter(currentStore));
-  const auto=autoCells(d,d._target,null);
   let row='<tr class="sum-row" id="store-sum-row"><td>'+esc(storeFilterLabel(currentStore))+' 合計</td>';
-  COLUMNS.forEach(function(c){
-    if(c.auto){row+=auto[c.f];return;}
-    if(c.f==='late'){row+='<td><span class="auto-val">—</span></td>';return;}
-    if(c.f==='unit_price'){row+='<td><span class="auto-val">'+(d.unit_price?d.unit_price.toLocaleString():'—')+'</span></td>';return;}
-    row+=storeDisplayCell(c,d);
-  });
+  STORE_COLUMNS.forEach(function(c){row+=storeValueCell(c,d,null);});
   return row+'</tr>';
 }
 function renderStoreTable(tb,colspan){
   const editable=canEditStoreSales();
-  const rows=sortList(getStoreRows(),function(r){return r.d;},function(r){return r.d._target;});
+  const rows=sortList(getStoreRows(),function(r){return r.d;},function(){return 0;});
   if(!rows.length){tb.innerHTML='<tr><td colspan="'+colspan+'" class="empty-msg">対象店舗がありません</td></tr>';return;}
   rows.forEach(function(r,i){r.key='st'+i;});
   tb.innerHTML=rows.map(function(r){return storeRowHtml(r,editable);}).join('')+storeSumRowHtml();
@@ -656,30 +663,30 @@ function renderStoreTable(tb,colspan){
   tb.querySelectorAll('input[data-store]').forEach(function(el){
     el.addEventListener('change',function(){
       const st=el.dataset.store,key=el.dataset.key,field=el.dataset.f,val=el.value===''?null:Number(el.value);
-      if(!storeSales[st])storeSales[st]={};
-      storeSales[st][field]=val;
+      if(el.dataset.mat){
+        if(val==null)delete materialCost[st];else materialCost[st]=val;
+      }else{
+        if(!storeSales[st])storeSales[st]={};
+        storeSales[st][field]=val;
+      }
       // その行の自動計算・スタッフ計の差・合計行・合計パネルだけ更新（入力中の欄はそのまま）
       const r=byKey[key];r.d=storeFig(st);
-      const d=r.d;
-      [['result',calcResult(d)],['tech',techOf(d)]].forEach(function(p){
-        const v=p[1];
-        document.getElementById(p[0]+'-'+key).textContent=v?inTax(v).toLocaleString():'—';
-        document.getElementById(p[0]+'-'+key+'-sub').textContent=v?'(税抜 '+Math.round(v).toLocaleString()+')':'';
-      });
-      document.getElementById('tratio-'+key).textContent=ratioText(d);
-      document.getElementById('unit-'+key).textContent=d.unit_price?d.unit_price.toLocaleString():'—';
+      const res=calcResult(r.d);
+      document.getElementById('result-'+key).textContent=res?inTax(res).toLocaleString():'—';
+      document.getElementById('result-'+key+'-sub').textContent=res?'(税抜 '+Math.round(res).toLocaleString()+')':'';
+      document.getElementById('tratio-'+key).textContent=ratioText(r.d);
       const note=document.getElementById('staffnote-'+key);
       const html=staffNoteHtml(r);
       if(note)note.outerHTML=html;
       else if(html)el.closest('tr').firstElementChild.insertAdjacentHTML('beforeend',html);
       document.getElementById('store-sum-row').outerHTML=storeSumRowHtml();
       updateTotals();
-      saveStoreSales(st,field,val);
+      if(el.dataset.mat)saveStoreCost(st,val);else saveStoreSales(st,field,val);
     });
   });
 }
 
-// 店舗の材料比率：材料費が入っていれば 材料費÷店舗の総売結果（どちらも税抜）、なければ手入力の比率
+// 店舗の材料比率：材料費が入っていれば 材料費÷店舗の総売上（どちらも税抜）、なければ手入力の比率
 function effectiveMaterialRatio(storeId){
   const cost=materialCost[storeId];
   if(cost!=null){
@@ -690,51 +697,38 @@ function effectiveMaterialRatio(storeId){
   return v!=null?Number(v):null;
 }
 
-// 合計パネル：店舗の数字（事務所入力）を表示。下にスタッフ入力の合計と差を表示
+// 合計パネル：店舗の数字（事務所入力）。下にスタッフ入力の合計（店舗1つのときは差も）
 function updateTotals(){
   const ids=isSingleStore(currentStore)?[currentStore]:storesInFilter(currentStore);
   const a=sumStoreFigs(ids);
-  const result=calcResult(a),tech=techOf(a);
-  const clients=a.meimei_clients+a.free_clients;
-  function set(id,val,sub){
-    document.getElementById(id).textContent=val;
-    const el=document.getElementById(id+'-sub');if(el)el.textContent=sub||'';
+  const result=calcResult(a);
+  function money(id,v){
+    document.getElementById(id).textContent=v?yen(v*(1+TAX_RATE)):'—';
+    document.getElementById(id+'-sub').textContent=v?'(税抜 '+yen(v)+')':'';
   }
-  set('tot-target',a._target?yen(a._target):'—',a._target?exTax(a._target):'');
-  set('tot-result',result?yen(result*(1+TAX_RATE)):'—',result?'(税抜 '+yen(result)+')':'');
-  set('tot-tech',tech?yen(tech*(1+TAX_RATE)):'—',tech?'(税抜 '+yen(tech)+')':'');
-  set('tot-meimei',a.meimei_sales?yen(a.meimei_sales*(1+TAX_RATE)):'—',a.meimei_sales?'(税抜 '+yen(a.meimei_sales)+')':'');
-  set('tot-free',a.free_sales?yen(a.free_sales*(1+TAX_RATE)):'—',a.free_sales?'(税抜 '+yen(a.free_sales)+')':'');
-  document.getElementById('tot-clients').textContent=clients?clients+'名':'—';
-  set('tot-tanden',a.tanden?yen(a.tanden*(1+TAX_RATE)):'—',a.tanden?'(税抜 '+yen(a.tanden)+')':'');
-  document.getElementById('tot-tratio').textContent=ratioText(a);
+  money('tot-result',result);
+  money('tot-tech',a.tech_sales);
+  money('tot-tanden',a.tanden);
   document.getElementById('tot-milbon').textContent=a.milbon_id?a.milbon_id.toLocaleString():'—';
   document.getElementById('tot-ticket').textContent=a.ticket_count?a.ticket_count.toLocaleString()+'枚':'—';
+  document.getElementById('tot-tratio').textContent=ratioText(a);
+  document.getElementById('tot-rnew').textContent=a.return_new!=null?a.return_new.toFixed(1)+'%':'—';
+  document.getElementById('tot-rnew-sub').textContent=(a.return_new!=null&&!isSingleStore(currentStore))?'店舗の平均':'';
+  document.getElementById('tot-cost').textContent=a.cost!=null?yen(a.cost):'—';
+  document.getElementById('tot-cost-sub').textContent=a.cost!=null?(isSingleStore(currentStore)?'(税抜)':'(税抜・'+a._costN+'店舗)'):'';
 
   // スタッフ入力の合計（参考）
   const staff=calcResult(aggregate(getStaffList()));
   let note='店舗の数字（事務所入力）';
   if(staff){
     note+='　／　スタッフ入力の合計 '+yen(staff*(1+TAX_RATE));
-    // 差は店舗を1つ選んでいるときだけ（複数店舗では、まだ入力していない店舗の分までずれて見えるため。店舗ごとの差は一覧の各行に表示）
+    // 差は店舗を1つ選んでいるときだけ（複数店舗では未入力の店舗の分までずれて見えるため。店舗ごとの差は一覧の各行に表示）
     if(result&&isSingleStore(currentStore)){
       const diff=inTax(result)-inTax(staff);
       note+=diff===0?'（一致）':'（差 '+(diff>0?'+':'')+diff.toLocaleString()+'）';
     }
   }
   document.getElementById('tot-note').textContent=note;
-
-  // 材料費・材料比率：店舗選択時はその店舗、全店舗・グループ全体は入力済み店舗の合計／平均
-  const costs=ids.map(function(id){return materialCost[id];}).filter(function(v){return v!=null;});
-  const costSum=costs.reduce(function(x,y){return x+Number(y);},0);
-  set('tot-cost',costs.length?yen(costSum):'—',costs.length?(isSingleStore(currentStore)?'(税抜)':'(税抜・'+costs.length+'店舗)'):'');
-  const ratios=ids.map(effectiveMaterialRatio).filter(function(v){return v!=null;});
-  if(!ratios.length)set('tot-material','—','');
-  else if(isSingleStore(currentStore))set('tot-material',ratios[0]+'%',materialCost[currentStore]!=null?'材料費から計算':'');
-  else{
-    const avg=ratios.reduce(function(x,y){return x+y;},0)/ratios.length;
-    set('tot-material',avg.toFixed(1)+'%',ratios.length+'店舗の平均');
-  }
 }
 
 // ===== 役職別基準値 =====
