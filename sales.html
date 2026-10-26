@@ -16,7 +16,6 @@ body{background:var(--cream);font-family:'Noto Sans JP',sans-serif;color:var(--d
 .loading-spinner{width:40px;height:40px;border:3px solid var(--gold-light);border-top-color:var(--gold);border-radius:50%;animation:spin 0.8s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg);}}
 .loading-text{font-size:13px;color:var(--mid);}
-.main{max-width:1400px;margin:0 auto;padding:20px 16px 80px;}
 /* 3段目：このページの項目 */
 .sub-bar{background:white;border:1px solid var(--gold-light);border-radius:12px;padding:14px 16px;margin-bottom:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
 .sub-bar label{font-size:12px;color:var(--mid);font-weight:500;}
@@ -27,13 +26,6 @@ body{background:var(--cream);font-family:'Noto Sans JP',sans-serif;color:var(--d
 .store-tabs{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
 .store-tab{font-family:'Noto Sans JP',sans-serif;font-size:13px;font-weight:700;padding:8px 18px;border-radius:20px;border:2px solid var(--gold-light);background:white;color:var(--mid);cursor:pointer;transition:all 0.15s;}
 .store-tab.active{background:var(--gold);color:white;border-color:var(--gold);}
-.total-panel{background:var(--dark);border-radius:12px;padding:14px 16px;margin-bottom:12px;color:white;}
-.total-panel-label{font-size:10px;letter-spacing:3px;color:var(--gold);margin-bottom:10px;}
-.total-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;}
-.total-item{text-align:center;}
-.total-item-val{font-size:17px;font-weight:700;color:var(--gold-light);}
-.total-item-label{font-size:10px;color:var(--soft);margin-top:2px;}
-.total-item-sub{font-size:10px;color:var(--soft);margin-top:1px;}
 .scroll-hint{font-size:11px;color:var(--soft);text-align:right;margin-bottom:4px;}
 .table-wrap{background:white;border:1px solid var(--gold-light);border-radius:12px;overflow-x:auto;-webkit-overflow-scrolling:touch;box-shadow:0 2px 8px rgba(0,0,0,0.04);}
 table{width:100%;border-collapse:collapse;min-width:900px;}
@@ -76,23 +68,6 @@ tbody tr:hover td:first-child{background:#fffbf7;}
 .btn{font-family:'Noto Sans JP',sans-serif;font-size:13px;font-weight:500;padding:8px 16px;border-radius:7px;border:none;cursor:pointer;}
 .btn-dark{background:var(--dark);color:white;}
 .btn-ghost{background:#ede8e2;color:var(--mid);}
-/* 表示の切り替え（月・見かた・範囲を1枚のカードにまとめる） */
-.ctrl-card{background:white;border:1px solid var(--gold-light);border-radius:12px;padding:14px 16px;margin-bottom:14px;}
-.ctrl-row{display:flex;align-items:center;gap:10px 14px;flex-wrap:wrap;}
-.ctrl-row+.ctrl-row{margin-top:12px;}
-.ctrl-group{display:flex;align-items:center;gap:8px;}
-.ctrl-label{font-size:12px;color:var(--mid);font-weight:500;white-space:nowrap;}
-.ctrl-tools{border-top:1px solid #f0e8dc;padding-top:12px;}
-.seg{display:inline-flex;border:2px solid var(--dark);border-radius:22px;overflow:hidden;}
-.seg button{font-family:'Noto Sans JP',sans-serif;font-size:13px;font-weight:700;padding:7px 18px;border:none;background:white;color:var(--dark);cursor:pointer;white-space:nowrap;}
-.seg button.active{background:var(--dark);color:var(--gold-light);}
-.scope-sel{font-family:'Noto Sans JP',sans-serif;font-size:14px;font-weight:700;padding:8px 34px 8px 14px;border-radius:9px;border:2px solid var(--gold);outline:none;cursor:pointer;color:var(--dark);background:white url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='7'%3E%3Cpath d='M0 0l6 7 6-7z' fill='%23c9a96e'/%3E%3C/svg%3E") no-repeat right 12px center;appearance:none;-webkit-appearance:none;min-width:150px;}
-.scope-fixed{font-size:14px;font-weight:700;}
-.status-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--mid);background:#f5f0eb;border-radius:8px;padding:8px 12px;margin-bottom:12px;}
-.status-bar.editable{background:#eef5f0;color:#2f5a3c;}
-.status-bar b{color:var(--dark);}
-.back-btn{font-family:'Noto Sans JP',sans-serif;font-size:12px;font-weight:700;padding:5px 12px;border-radius:7px;border:1.5px solid var(--soft);background:white;color:var(--dark);cursor:pointer;white-space:nowrap;}
-.total-panel-label span{color:var(--soft);letter-spacing:1px;margin-left:8px;}
 .store-badge{display:block;font-size:9px;font-weight:400;color:var(--mid);margin-top:1px;}
 .store-link{background:none;border:none;font-family:'Noto Sans JP',sans-serif;font-size:12px;font-weight:700;color:var(--accent);cursor:pointer;padding:0;text-decoration:underline;text-underline-offset:3px;}
 tr.sum-row td{background:#f5f0eb;font-weight:700;}
@@ -100,6 +75,75 @@ tr.sum-row td:first-child{background:#f5f0eb;}
 .store-fixed{display:inline-block;font-size:14px;font-weight:700;padding:8px 18px;border-radius:20px;border:2px solid var(--gold);background:white;margin-bottom:14px;}
 .mat-row{display:flex;gap:8px;}
 .mat-row .field{flex:1;}
+/* ===== レイアウト（スマホ基準。iPad以上は下の @media で横に広げる） ===== */
+.main{max-width:1400px;margin:0 auto;padding:14px 12px 80px;}
+.ctrl-card{background:white;border:1px solid var(--gold-light);border-radius:16px;padding:12px;margin-bottom:10px;box-shadow:0 1px 3px rgba(26,20,16,0.04);}
+.ctrl-main{display:flex;flex-direction:column;gap:10px;}
+/* 月：‹ 2026年10月 › の1つの部品 */
+.month-pill{display:flex;align-items:center;height:46px;border:1.5px solid var(--gold-light);border-radius:12px;overflow:hidden;background:white;}
+.mp-btn{width:46px;height:100%;border:none;background:#faf6f0;color:var(--accent);font-size:24px;line-height:1;cursor:pointer;flex-shrink:0;font-family:inherit;}
+.mp-btn:active{background:var(--gold-light);}
+.mp-sel{flex:1;min-width:0;height:100%;border:none;outline:none;background:transparent;text-align:center;text-align-last:center;font-family:'Noto Sans JP',sans-serif;font-size:17px;font-weight:700;color:var(--dark);appearance:none;-webkit-appearance:none;cursor:pointer;letter-spacing:0.5px;}
+/* 見かた：iOS風のセグメント */
+.view-row{display:flex;flex-direction:column;gap:10px;}
+.seg{display:grid;grid-template-columns:1fr 1fr;background:#f1ebe3;border-radius:12px;padding:3px;height:44px;}
+.seg button{font-family:'Noto Sans JP',sans-serif;font-size:13px;font-weight:700;border:none;border-radius:9px;background:transparent;color:var(--mid);cursor:pointer;white-space:nowrap;transition:background .15s,color .15s;}
+.seg button.active{background:var(--dark);color:var(--gold-light);box-shadow:0 1px 4px rgba(26,20,16,0.25);}
+/* 範囲：ラベル付きのプルダウン */
+.scope-wrap{display:flex;align-items:center;height:44px;border:1.5px solid var(--gold);border-radius:12px;padding-left:14px;background:white;}
+.scope-label{font-size:11px;font-weight:700;color:var(--gold);letter-spacing:1px;flex-shrink:0;padding-right:10px;border-right:1px solid var(--gold-light);}
+#scope-box{flex:1;min-width:0;display:flex;}
+.scope-sel{flex:1;min-width:0;height:40px;border:none;outline:none;font-family:'Noto Sans JP',sans-serif;font-size:15px;font-weight:700;color:var(--dark);padding:0 34px 0 12px;appearance:none;-webkit-appearance:none;cursor:pointer;background:transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='7'%3E%3Cpath d='M0 0l6 7 6-7z' fill='%23c9a96e'/%3E%3C/svg%3E") no-repeat right 14px center;}
+.scope-fixed{font-size:15px;font-weight:700;padding:0 12px;line-height:40px;}
+/* その他の機能：1行の横スクロール */
+.tool-row{display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;margin:12px -12px 0;padding:12px 12px 0;border-top:1px solid #f0e8dc;}
+.tool-row::-webkit-scrollbar{display:none;}
+.chip{flex-shrink:0;white-space:nowrap;font-family:'Noto Sans JP',sans-serif;font-size:12px;font-weight:500;padding:7px 13px;border-radius:18px;border:1px solid var(--gold-light);background:#fdfbf8;color:var(--mid);cursor:pointer;}
+.chip:active{background:var(--gold-light);color:var(--dark);}
+/* 状態の表示 */
+.status-bar{display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;font-size:12px;color:var(--mid);background:#f5f0eb;border-radius:12px;padding:9px 12px;margin-bottom:10px;line-height:1.5;}
+.status-bar.editable{background:#eef5f0;color:#2f5a3c;}
+.status-bar b{color:var(--dark);}
+.status-bar span+span{font-size:11px;opacity:0.8;}
+.back-btn{font-family:'Noto Sans JP',sans-serif;font-size:12px;font-weight:700;padding:6px 12px;border-radius:9px;border:1px solid var(--soft);background:white;color:var(--dark);cursor:pointer;white-space:nowrap;}
+/* 合計パネル */
+.total-panel{background:linear-gradient(160deg,#241c16 0%,#1a1410 60%);border-radius:16px;padding:16px;margin-bottom:12px;color:white;box-shadow:0 4px 18px rgba(26,20,16,0.18);}
+.tp-head{margin-bottom:12px;}
+.total-panel-label{font-size:11px;letter-spacing:2px;color:var(--gold);font-weight:500;}
+.total-panel-label span{color:var(--soft);letter-spacing:1px;margin-left:8px;}
+.tp-note{font-size:10px;color:#9c8c78;margin-top:4px;line-height:1.5;}
+.tp-hero{padding:4px 0 14px;border-bottom:1px solid rgba(232,213,176,0.15);margin-bottom:12px;}
+.tp-hero-label{font-size:11px;color:var(--soft);letter-spacing:1px;}
+.tp-hero-val{font-family:'Playfair Display','Noto Sans JP',serif;font-size:32px;font-weight:700;color:var(--gold-light);line-height:1.2;margin-top:2px;font-variant-numeric:tabular-nums;}
+.tp-hero-sub{font-size:11px;color:var(--soft);}
+.tp-hero-chip{display:inline-block;margin-top:10px;font-size:11px;color:var(--soft);background:rgba(201,169,110,0.14);border:1px solid rgba(201,169,110,0.3);border-radius:14px;padding:4px 11px;}
+.tp-hero-chip b{color:var(--gold-light);font-size:13px;margin-left:4px;}
+.total-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.total-item{background:rgba(255,255,255,0.05);border-radius:10px;padding:9px 8px;min-width:0;}
+.total-item-label{font-size:10px;color:var(--soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.total-item-val{font-size:14px;font-weight:700;color:var(--gold-light);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums;}
+.total-item-sub{font-size:9px;color:#9c8c78;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+/* iPad以上：操作を横1行、合計は総売上を左・他を右に */
+@media(min-width:760px){
+  .main{padding:20px 16px 80px;}
+  .ctrl-card{padding:14px 16px;}
+  .ctrl-main{flex-direction:row;align-items:center;gap:12px;}
+  .month-pill{width:240px;flex-shrink:0;}
+  .view-row{flex-direction:row;flex:1;gap:12px;}
+  .seg{width:280px;flex-shrink:0;}
+  .scope-wrap{flex:1;max-width:320px;}
+  .tool-row{margin:14px -16px 0;padding:12px 16px 0;}
+  .total-panel{padding:18px 22px;}
+  .tp-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+  .tp-note{margin-top:0;}
+  .tp-body{display:flex;gap:22px;align-items:stretch;}
+  .tp-hero{border-bottom:none;border-right:1px solid rgba(232,213,176,0.15);margin:0;padding:6px 22px 6px 0;min-width:220px;display:flex;flex-direction:column;justify-content:center;}
+  .tp-hero-val{font-size:36px;}
+  .total-grid{flex:1;grid-template-columns:repeat(3,1fr);}
+  .tp-hero-chip{align-self:flex-start;}
+  .total-item{padding:10px 12px;}
+  .total-item-val{font-size:16px;}
+}
 </style>
 </head>
 <body>
@@ -150,53 +194,55 @@ tr.sum-row td:first-child{background:#f5f0eb;}
 </div>
 
 <div class="main">
-  <!-- 3段目：何を見るか（月・見かた・範囲）をここにまとめる -->
+  <!-- 3段目：何を見るか（月・見かた・範囲）。スマホは縦に1列、iPad以上は横1行 -->
   <div class="ctrl-card">
-    <div class="ctrl-row">
-      <div class="ctrl-group">
-        <span class="ctrl-label">対象月</span>
-        <button class="month-nav-btn" onclick="shiftMonth(-1)">◀</button>
-        <select class="month-sel" id="month-sel" onchange="onMonthChange()"></select>
-        <button class="month-nav-btn" onclick="shiftMonth(1)">▶</button>
+    <div class="ctrl-main">
+      <div class="month-pill">
+        <button class="mp-btn" onclick="shiftMonth(-1)" aria-label="前の月">‹</button>
+        <select class="mp-sel" id="month-sel" onchange="onMonthChange()"></select>
+        <button class="mp-btn" onclick="shiftMonth(1)" aria-label="次の月">›</button>
       </div>
-    </div>
-    <div class="ctrl-row" id="view-row">
-      <div class="ctrl-group" id="mode-group">
-        <span class="ctrl-label">見かた</span>
+      <div class="view-row" id="view-row">
         <div class="seg">
-          <button id="mode-store" onclick="setViewMode('store')">🏪 店舗ごと</button>
-          <button id="mode-person" onclick="setViewMode('person')">👤 スタッフごと</button>
+          <button id="mode-store" onclick="setViewMode('store')">店舗ごと</button>
+          <button id="mode-person" onclick="setViewMode('person')">スタッフごと</button>
         </div>
-      </div>
-      <div class="ctrl-group">
-        <span class="ctrl-label">範囲</span>
-        <div id="scope-box"></div>
+        <label class="scope-wrap"><span class="scope-label">範囲</span><span id="scope-box"></span></label>
       </div>
     </div>
-    <div class="ctrl-row ctrl-tools">
-      <button class="sub-btn" onclick="showAddModal()">＋ 月を追加</button>
-      <button class="sub-btn" id="btn-productivity" onclick="showProductivityModal()" style="display:none">📊 役職別基準値</button>
-      <button class="sub-btn" id="btn-material" onclick="showMaterialModal()" style="display:none">🧾 材料比率</button>
-      <button class="sub-btn" onclick="location.href='trends.html'">📈 年間推移</button>
-      <button class="sub-btn" onclick="location.href='compare.html'">🏪 店舗比較（月別）</button>
+    <div class="tool-row">
+      <button class="chip" onclick="location.href='compare.html'">🏪 店舗比較</button>
+      <button class="chip" onclick="location.href='trends.html'">📈 年間推移</button>
+      <button class="chip" id="btn-productivity" onclick="showProductivityModal()" style="display:none">📊 役職別基準値</button>
+      <button class="chip" id="btn-material" onclick="showMaterialModal()" style="display:none">🧾 材料比率</button>
+      <button class="chip" onclick="showAddModal()">＋ 月を追加</button>
     </div>
   </div>
 
   <!-- いま何を表示しているか・入力できるか -->
   <div class="status-bar" id="status-bar"></div>
 
+  <!-- 合計：総売上を大きく、他の項目はタイルで並べる -->
   <div class="total-panel">
-    <div class="total-panel-label" id="total-label">✦ 合計</div>
-    <div id="tot-note" style="font-size:11px;color:var(--soft);margin:-4px 0 10px"></div>
-    <div class="total-grid">
-      <div class="total-item"><div class="total-item-label">総売上</div><div class="total-item-val" id="tot-result">—</div><div class="total-item-sub" id="tot-result-sub"></div></div>
-      <div class="total-item"><div class="total-item-label">技術売上</div><div class="total-item-val" id="tot-tech">—</div><div class="total-item-sub" id="tot-tech-sub"></div></div>
-      <div class="total-item"><div class="total-item-label">店販売上</div><div class="total-item-val" id="tot-tanden">—</div><div class="total-item-sub" id="tot-tanden-sub"></div></div>
-      <div class="total-item"><div class="total-item-label">ミルボンID</div><div class="total-item-val" id="tot-milbon">—</div></div>
-      <div class="total-item"><div class="total-item-label">チケット販売枚数</div><div class="total-item-val" id="tot-ticket">—</div></div>
-      <div class="total-item"><div class="total-item-label">店販比率</div><div class="total-item-val" id="tot-tratio">—</div></div>
-      <div class="total-item"><div class="total-item-label">新規再来</div><div class="total-item-val" id="tot-rnew">—</div><div class="total-item-sub" id="tot-rnew-sub"></div></div>
-      <div class="total-item"><div class="total-item-label">材料費</div><div class="total-item-val" id="tot-cost">—</div><div class="total-item-sub" id="tot-cost-sub"></div></div>
+    <div class="tp-head">
+      <div class="total-panel-label" id="total-label">✦ 合計</div>
+      <div class="tp-note" id="tot-note"></div>
+    </div>
+    <div class="tp-body">
+      <div class="tp-hero">
+        <div class="tp-hero-label">総売上</div>
+        <div class="tp-hero-val" id="tot-result">—</div>
+        <div class="tp-hero-sub" id="tot-result-sub"></div>
+        <div class="tp-hero-chip">店販比率 <b id="tot-tratio">—</b></div>
+      </div>
+      <div class="total-grid">
+        <div class="total-item"><div class="total-item-label">技術売上</div><div class="total-item-val" id="tot-tech">—</div><div class="total-item-sub" id="tot-tech-sub"></div></div>
+        <div class="total-item"><div class="total-item-label">店販売上</div><div class="total-item-val" id="tot-tanden">—</div><div class="total-item-sub" id="tot-tanden-sub"></div></div>
+        <div class="total-item"><div class="total-item-label">ミルボンID</div><div class="total-item-val" id="tot-milbon">—</div></div>
+        <div class="total-item"><div class="total-item-label">チケット販売</div><div class="total-item-val" id="tot-ticket">—</div></div>
+        <div class="total-item"><div class="total-item-label">新規再来</div><div class="total-item-val" id="tot-rnew">—</div><div class="total-item-sub" id="tot-rnew-sub"></div></div>
+        <div class="total-item"><div class="total-item-label">材料費</div><div class="total-item-val" id="tot-cost">—</div><div class="total-item-sub" id="tot-cost-sub"></div></div>
+      </div>
     </div>
   </div>
 
