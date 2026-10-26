@@ -125,11 +125,9 @@ function buildCells(){
   const months=yearMonths();
   const keys=APP_CONFIG.stores.map(function(s){return s.id;}).concat([ALL_COMMON]);
   keys.forEach(function(k){cells[k]={};months.forEach(function(m){cells[k][m]=emptyB();});});
+  // 店舗の数字（事務所入力：store_sales）を使う
   salesRows.forEach(function(row){
-    const s=byId[row.student_id];if(!s)return;
-    let st=getStoreForMonth(s,row.month);
-    if(!isSingleStore(st))st=ALL_COMMON;
-    const b=cells[st]&&cells[st][row.month];if(!b)return;
+    const b=cells[row.store]&&cells[row.store][row.month];if(!b)return;
     const tech=Number(row.meimei_sales||0)+Number(row.free_sales||0);
     b.tech+=tech;b.tanden+=Number(row.tanden||0);
     b.clients+=Number(row.meimei_clients||0)+Number(row.free_clients||0);
@@ -181,7 +179,7 @@ function renderMetricTabs(){
     return '<button class="metric-tab'+(m.id===currentMetric?' active':'')+'" onclick="setMetric(\''+m.id+'\')">'+m.label+'</button>';
   }).join('');
   const M=metricDef();
-  let note='行＝店舗、列＝月。各月で一番良い店舗を緑字にしています。';
+  let note='店舗の数字（事務所入力）。行＝店舗、列＝月。各月で一番良い店舗を緑字にしています。';
   if(M.money)note=(M.noTax?'金額は税抜。':'金額は税込。')+note;
   if(M.id==='rn'||M.id==='rr')note='店舗の値は入力があるスタッフの平均。'+note;
   if(M.id==='material')note='材料費が入っている月は「材料費÷総売（税抜）」、ない月は入力された比率。グループ・年間は店舗の平均。'+note;
@@ -228,9 +226,7 @@ function renderTable(){
     if(ids.length>1)html+=row((g.short||g.label)+' 合計',ids,'group-row',false);
   });
   if(canViewAllStores()){
-    const common=sumOver([ALL_COMMON],months);
-    if(common.hasData)html+=row('全店共通',[ALL_COMMON],'',false);
-    const allIds=APP_CONFIG.stores.map(function(s){return s.id;}).concat(common.hasData?[ALL_COMMON]:[]);
+    const allIds=APP_CONFIG.stores.map(function(s){return s.id;});
     html+=row('全店舗 合計',allIds,'total-row',false);
   }
   document.getElementById('cmp-body').innerHTML=html;
@@ -247,7 +243,7 @@ async function loadYear(){
   document.getElementById('loading').style.display='flex';
   const months=yearMonths();
   const [sres,mres]=await Promise.all([
-    sb.from('sales_data').select('*').gte('month',months[0]).lte('month',months[11]),
+    sb.from('store_sales').select('*').gte('month',months[0]).lte('month',months[11]),
     sb.from('material_ratio').select('*').gte('month',months[0]).lte('month',months[11]),
   ]);
   salesRows=sres.data||[];
