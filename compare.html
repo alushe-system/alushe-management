@@ -72,19 +72,16 @@ const ALL_COMMON=APP_CONFIG.allStoresValue;
 
 // 比較できる指標。calc(集計値) で表示する値を返す
 //   money: 税込の金額表示 / pct: %表示 / higherBetter=false は低いほど良い（その月の一番良い店舗を緑字に）
+// 店舗の項目（数値管理の店舗の一覧と同じ並び）
 const METRICS=[
-  {id:'result',label:'総売結果',money:true,calc:function(b){return b.tech+b.tanden;}},
+  {id:'result',label:'総売上',money:true,calc:function(b){return b.tech+b.tanden;}},
   {id:'tech',label:'技術売上',money:true,calc:function(b){return b.tech;}},
   {id:'tanden',label:'店販売上',money:true,calc:function(b){return b.tanden;}},
-  {id:'tratio',label:'店販比率',pct:true,calc:function(b){const r=b.tech+b.tanden;return r?b.tanden/r*100:null;}},
-  {id:'clients',label:'総入客数',unit:'名',calc:function(b){return b.clients;}},
-  {id:'unit',label:'客単価',money:true,calc:function(b){return b.clients?b.tech/b.clients:null;}},
-  {id:'rn',label:'再来率新規',pct:true,calc:function(b){return avg(b.rn);}},
-  {id:'rr',label:'再来率顧客',pct:true,calc:function(b){return avg(b.rr);}},
   {id:'milbon',label:'ミルボンID',calc:function(b){return b.milbon;}},
   {id:'ticket',label:'チケット販売枚数',unit:'枚',calc:function(b){return b.ticket;}},
+  {id:'tratio',label:'店販比率',pct:true,calc:function(b){const r=b.tech+b.tanden;return r?b.tanden/r*100:null;}},
+  {id:'rn',label:'新規再来',pct:true,calc:function(b){return avg(b.rn);}},
   {id:'cost',label:'材料費',money:true,noTax:true,calc:function(b){return b.costN?b.cost:null;}},
-  {id:'material',label:'材料比率',pct:true,higherBetter:false,calc:function(b){return materialOf(b);}},
 ];
 
 let ME=null,students=[],assignHistory=[],currentYear=0,currentMetric='result';
@@ -128,9 +125,7 @@ function buildCells(){
   // 店舗の数字（事務所入力：store_sales）を使う
   salesRows.forEach(function(row){
     const b=cells[row.store]&&cells[row.store][row.month];if(!b)return;
-    const tech=Number(row.meimei_sales||0)+Number(row.free_sales||0);
-    b.tech+=tech;b.tanden+=Number(row.tanden||0);
-    b.clients+=Number(row.meimei_clients||0)+Number(row.free_clients||0);
+    b.tech+=Number(row.tech_sales||0);b.tanden+=Number(row.tanden||0);
     b.milbon+=Number(row.milbon_id||0);b.ticket+=Number(row.ticket_count||0);
     if(row.return_new!=null)b.rn.push(Number(row.return_new));
     if(row.return_reg!=null)b.rr.push(Number(row.return_reg));
@@ -181,7 +176,7 @@ function renderMetricTabs(){
   const M=metricDef();
   let note='店舗の数字（事務所入力）。行＝店舗、列＝月。各月で一番良い店舗を緑字にしています。';
   if(M.money)note=(M.noTax?'金額は税抜。':'金額は税込。')+note;
-  if(M.id==='rn'||M.id==='rr')note='店舗の値は入力があるスタッフの平均。'+note;
+  if(M.id==='rn')note='グループ・年間は店舗の平均。'+note;
   if(M.id==='material')note='材料費が入っている月は「材料費÷総売（税抜）」、ない月は入力された比率。グループ・年間は店舗の平均。'+note;
   if(M.id==='unit')note='客単価＝技術売上÷総入客数（税込）。'+note;
   document.getElementById('note').textContent=note;
