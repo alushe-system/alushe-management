@@ -83,6 +83,8 @@ const METRICS=[
   {id:'milbon',label:'ミルボンID（円）',money:true,calc:function(b){return b.milbon;}},
   {id:'ticket',label:'チケット販売枚数',unit:'枚',calc:function(b){return b.ticket;}},
   {id:'tratio',label:'店販比率',pct:true,calc:function(b){return b.tandenN&&b.tTotal?b.tanden/b.tTotal*100:null;}},
+  {id:'newc',label:'新規客数',unit:'名',calc:function(b){return b.newc;}},
+  {id:'repc',label:'再来客数',unit:'名',calc:function(b){return b.repc;}},
   {id:'rn',label:'新規再来',pct:true,calc:function(b){return avg(b.rn);}},
   {id:'cost',label:'材料費',money:true,calc:function(b){return b.costN?b.cost:null;}},
   {id:'mratio',label:'材料比率',pct:true,higherBetter:false,calc:function(b){return avg(b.mr);}},
@@ -105,9 +107,9 @@ function canViewAllStores(){
 
 // ===== 集計 =====
 // 空の集計値。店舗×月ごとに作り、merge でグループ・拠点・年間に足し上げる
-function emptyB(){return {total:0,tTotal:0,tech:0,techN:0,tanden:0,tandenN:0,milbon:0,ticket:0,rn:[],cost:0,costN:0,mr:[],eye:false,hasData:false};}
+function emptyB(){return {total:0,tTotal:0,tech:0,techN:0,tanden:0,tandenN:0,milbon:0,ticket:0,newc:0,repc:0,rn:[],cost:0,costN:0,mr:[],eye:false,hasData:false};}
 function merge(a,b){
-  ['total','tTotal','tech','techN','tanden','tandenN','milbon','ticket','cost','costN'].forEach(function(f){a[f]+=b[f];});
+  ['total','tTotal','tech','techN','tanden','tandenN','milbon','ticket','newc','repc','cost','costN'].forEach(function(f){a[f]+=b[f];});
   a.rn=a.rn.concat(b.rn);a.mr=a.mr.concat(b.mr);
   a.eye=a.eye||b.eye;a.hasData=a.hasData||b.hasData;
   return a;
@@ -125,6 +127,7 @@ function buildCells(){
     if(row.tech_sales!=null){b.tech+=Number(row.tech_sales);b.techN++;}
     if(row.tanden!=null){b.tanden+=Number(row.tanden);b.tandenN++;b.tTotal+=Number(row.total_sales||0);}
     b.milbon+=Number(row.milbon_amount||0);b.ticket+=Number(row.ticket_count||0);
+    b.newc+=Number(row.new_clients||0);b.repc+=Number(row.repeat_clients||0);
     if(row.return_new!=null)b.rn.push(Number(row.return_new));
     b.eye=!!row.includes_eye;
     b.hasData=true;
@@ -193,7 +196,8 @@ function renderTable(){
     return higher?Math.max.apply(null,vals):Math.min.apply(null,vals);
   });
   function cell(r,cls){
-    return '<td class="'+cls+(r.v==null?' empty':'')+'">'+fmt(r.v)+(r.eye&&r.v!=null?'<sup class="eye-mark">＊</sup>':'')+'</td>';
+    const txt=fmt(r.v),blank=txt==='—';
+    return '<td class="'+cls+(blank?' empty':'')+'">'+txt+(r.eye&&!blank?'<sup class="eye-mark">＊</sup>':'')+'</td>';
   }
   function row(label,ids,cls,markBest){
     let h='<tr'+(cls?' class="'+cls+'"':'')+'><td>'+esc(label)+'</td>';
