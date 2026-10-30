@@ -49,6 +49,8 @@ tbody tr:hover td:first-child{background:#fffbf7;}
 .num-inp{font-family:'Noto Sans JP',sans-serif;padding:3px 4px;border-radius:4px;border:1px solid var(--soft);background:white;text-align:right;font-size:11px;width:68px;}
 .num-inp:focus{outline:none;border-color:var(--gold);}
 .num-inp.pct{width:48px;}
+.num-inp.money{width:92px;}
+.num-inp.mat-ratio{width:58px;}
 .num-inp:disabled,.tbl-sel:disabled{background-color:#f5f0eb;color:#7a6a58;border-color:#e8d5b0;opacity:1;-webkit-text-fill-color:#7a6a58;}
 .tbl-sel{font-family:'Noto Sans JP',sans-serif;font-size:11px;padding:3px 16px 3px 4px;border-radius:4px;border:1px solid var(--soft);background:white url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%237a6a58'/%3E%3C/svg%3E") no-repeat right 3px center;appearance:none;-webkit-appearance:none;cursor:pointer;color:#3a3028;width:58px;}
 .auto-val{font-size:12px;font-weight:700;color:var(--dark);}
@@ -68,6 +70,7 @@ tbody tr:hover td:first-child{background:#fffbf7;}
 .btn{font-family:'Noto Sans JP',sans-serif;font-size:13px;font-weight:500;padding:8px 16px;border-radius:7px;border:none;cursor:pointer;}
 .btn-dark{background:var(--dark);color:white;}
 .btn-ghost{background:#ede8e2;color:var(--mid);}
+.eye-badge{display:inline-block;font-size:9px;font-weight:700;padding:1px 6px;border-radius:8px;background:#fbe7dc;color:#a0522d;margin-left:4px;vertical-align:middle;}
 .store-badge{display:block;font-size:9px;font-weight:400;color:var(--mid);margin-top:1px;}
 .store-link{background:none;border:none;font-family:'Noto Sans JP',sans-serif;font-size:12px;font-weight:700;color:var(--accent);cursor:pointer;padding:0;text-decoration:underline;text-underline-offset:3px;}
 tr.sum-row td{background:#f5f0eb;font-weight:700;}
@@ -116,7 +119,8 @@ tr.sum-row td:first-child{background:#f5f0eb;}
 .tp-hero-label{font-size:11px;color:var(--soft);letter-spacing:1px;}
 .tp-hero-val{font-family:'Playfair Display','Noto Sans JP',serif;font-size:32px;font-weight:700;color:var(--gold-light);line-height:1.2;margin-top:2px;font-variant-numeric:tabular-nums;}
 .tp-hero-sub{font-size:11px;color:var(--soft);}
-.tp-hero-chip{display:inline-block;margin-top:10px;font-size:11px;color:var(--soft);background:rgba(201,169,110,0.14);border:1px solid rgba(201,169,110,0.3);border-radius:14px;padding:4px 11px;}
+.tp-hero-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;}
+.tp-hero-chip{display:inline-block;font-size:11px;color:var(--soft);background:rgba(201,169,110,0.14);border:1px solid rgba(201,169,110,0.3);border-radius:14px;padding:4px 11px;}
 .tp-hero-chip b{color:var(--gold-light);font-size:13px;margin-left:4px;}
 .total-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
 .total-item{background:rgba(255,255,255,0.05);border-radius:10px;padding:9px 8px;min-width:0;}
@@ -140,7 +144,6 @@ tr.sum-row td:first-child{background:#f5f0eb;}
   .tp-hero{border-bottom:none;border-right:1px solid rgba(232,213,176,0.15);margin:0;padding:6px 22px 6px 0;min-width:220px;display:flex;flex-direction:column;justify-content:center;}
   .tp-hero-val{font-size:36px;}
   .total-grid{flex:1;grid-template-columns:repeat(3,1fr);}
-  .tp-hero-chip{align-self:flex-start;}
   .total-item{padding:10px 12px;}
   .total-item-val{font-size:16px;}
 }
@@ -214,7 +217,7 @@ tr.sum-row td:first-child{background:#f5f0eb;}
       <button class="chip" onclick="location.href='compare.html'">🏪 店舗比較</button>
       <button class="chip" onclick="location.href='trends.html'">📈 年間推移</button>
       <button class="chip" id="btn-productivity" onclick="showProductivityModal()" style="display:none">📊 役職別基準値</button>
-      <button class="chip" id="btn-material" onclick="showMaterialModal()" style="display:none">🧾 材料比率</button>
+      <button class="chip" id="btn-import" onclick="location.href='import.html'" style="display:none">📥 CSV取り込み</button>
       <button class="chip" onclick="showAddModal()">＋ 月を追加</button>
     </div>
   </div>
@@ -233,12 +236,12 @@ tr.sum-row td:first-child{background:#f5f0eb;}
         <div class="tp-hero-label">総売上</div>
         <div class="tp-hero-val" id="tot-result">—</div>
         <div class="tp-hero-sub" id="tot-result-sub"></div>
-        <div class="tp-hero-chip">店販比率 <b id="tot-tratio">—</b></div>
+        <div class="tp-hero-chips"><span class="tp-hero-chip">店販比率 <b id="tot-tratio">—</b></span><span class="tp-hero-chip">材料比率 <b id="tot-mratio">—</b></span></div>
       </div>
       <div class="total-grid">
         <div class="total-item"><div class="total-item-label">技術売上</div><div class="total-item-val" id="tot-tech">—</div><div class="total-item-sub" id="tot-tech-sub"></div></div>
         <div class="total-item"><div class="total-item-label">店販売上</div><div class="total-item-val" id="tot-tanden">—</div><div class="total-item-sub" id="tot-tanden-sub"></div></div>
-        <div class="total-item"><div class="total-item-label">ミルボンID</div><div class="total-item-val" id="tot-milbon">—</div></div>
+        <div class="total-item"><div class="total-item-label">ミルボンID</div><div class="total-item-val" id="tot-milbon">—</div><div class="total-item-sub" id="tot-milbon-sub"></div></div>
         <div class="total-item"><div class="total-item-label">チケット販売</div><div class="total-item-val" id="tot-ticket">—</div></div>
         <div class="total-item"><div class="total-item-label">新規再来</div><div class="total-item-val" id="tot-rnew">—</div><div class="total-item-sub" id="tot-rnew-sub"></div></div>
         <div class="total-item"><div class="total-item-label">材料費</div><div class="total-item-val" id="tot-cost">—</div><div class="total-item-sub" id="tot-cost-sub"></div></div>
@@ -320,7 +323,7 @@ function renderScope(){
     box.innerHTML='<span class="scope-fixed">'+esc(storeLabel(currentStore))+'</span>';
     return;
   }
-  // 見かたに関係なく同じ選択肢（全店舗 → グループ全体＋各店舗）
+  // 見かたに関係なく同じ選択肢（全店舗 → グループ全体＋各店舗 → 拠点）
   let h='<select class="scope-sel" onchange="setScope(this.value)">';
   h+='<option value="all"'+(currentStore==='all'?' selected':'')+'>全店舗</option>';
   APP_CONFIG.storeGroups.forEach(function(g){
@@ -332,6 +335,7 @@ function renderScope(){
     list.forEach(function(x){h+='<option value="'+x.id+'"'+(currentStore===x.id?' selected':'')+'>'+x.label+'</option>';});
     h+='</optgroup>';
   });
+  h+=siteOptionsHtml(currentStore);   // 拠点（ヘア＋アイの合算）
   box.innerHTML=h+'</select>';
 }
 function renderStatus(){
@@ -341,7 +345,7 @@ function renderStatus(){
   if(isStoreList()){
     if(canEditStoreSales()){
       el.classList.add('editable');
-      el.innerHTML='<span>✏️ <b>'+esc(scope)+'</b>の店舗の数字 — 入力できます（税抜・自動保存）</span><span>店舗名をタップすると、その店舗のスタッフ個人の数字になります</span>';
+      el.innerHTML='<span>✏️ <b>'+esc(scope)+'</b>の店舗の数字 — 入力できます（税抜・自動保存）</span><span>CSVからも取り込めます。店舗名をタップすると、その店舗のスタッフ個人の数字になります</span>';
     }else{
       el.innerHTML='<span><b>'+esc(scope)+'</b>の店舗ごとの数字（閲覧のみ）</span><span>店舗名をタップすると、その店舗のスタッフの数字を見る・入力できます</span>';
     }
@@ -350,7 +354,7 @@ function renderStatus(){
   }else{
     el.classList.add('editable');
     const back=canViewAllStores()?'<button class="back-btn" onclick="backToStoreList()">← 店舗の一覧に戻る</button>':'';
-    el.innerHTML=back+'<span>✏️ <b>'+esc(scope)+'</b>のスタッフ個人の数字 — 入力できます（自動保存）</span><span>上の合計は店舗の数字（事務所入力）です</span>';
+    el.innerHTML=back+'<span>✏️ <b>'+esc(scope)+'</b>のスタッフ個人の数字 — 入力できます（自動保存）</span><span>上の合計は店舗の数字です</span>';
   }
 }
 function renderView(){
@@ -467,7 +471,7 @@ function getStaffList(){
 }
 function techOf(d){return Number(d.meimei_sales||0)+Number(d.free_sales||0);}
 function calcResult(d){return techOf(d)+Number(d.tanden||0);}
-function tandenRatio(d){const r=calcResult(d);return r?Number(d.tanden||0)/r*100:null;}
+function tandenRatio(d){if(d.tanden==null)return null;const r=calcResult(d);return r?Number(d.tanden)/r*100:null;}
 function targetOf(s){return Number(roleProductivity[s.position]||0);}
 
 // ===== スタッフの数字の集計 =====
@@ -491,48 +495,69 @@ function membersOfStore(storeId){
   return students.filter(function(s){return getStoreForMonth(s,currentMonth)===storeId;});
 }
 
-// ===== 店舗の数字（事務所入力：store_sales テーブル） =====
-// 店舗の項目は会議のスプレッドシートに合わせる（個人の項目とは別）
-//   総売上・店販比率は自動計算（総売上＝技術売上＋店販売上）。材料費は material_ratio に保存
+// ===== 店舗の数字（事務所入力・CSV取り込み：store_sales テーブル） =====
+// 店舗の項目は会議のスプレッドシートに合わせる（個人の項目とは別）。金額はすべて税抜。
+//   総売上：直接入力（CSV取り込みでは「純売上－チケット使用分」を税抜にした値）
+//   店販比率：店販売上÷総売上（自動）
+//   材料比率：入力があればその値、なければ 材料費÷技術売上（自動）
+//   材料費・材料比率は material_ratio テーブル（cost / ratio）に保存
 const STORE_COLUMNS=[
-  {f:'result',label:'総売上',auto:true},
+  {f:'total_sales',label:'総売上'},
   {f:'tech_sales',label:'技術売上'},
   {f:'tanden',label:'店販売上'},
-  {f:'milbon_id',label:'ミルボンID',int:true},
+  {f:'milbon_amount',label:'ミルボンID（円）'},
   {f:'ticket_count',label:'チケット販売枚数',int:true},
   {f:'tanden_ratio',label:'店販比率',auto:true},
   {f:'return_new',label:'新規再来',pct:true},
-  {f:'cost',label:'材料費',material:true},
+  {f:'cost',label:'材料費',mat:'cost'},
+  {f:'mat_ratio',label:'材料比率',mat:'ratio',pct:true},
 ];
-const STORE_FIELDS=['tech_sales','tanden','milbon_id','ticket_count','return_new'];
+const STORE_FIELDS=['total_sales','tech_sales','tanden','milbon_amount','ticket_count','return_new','includes_eye','source'];
 let storeSales={};   // storeSales[店舗id] = { 各項目, db_id }
 function canEditStoreSales(){return hasAccess(APP_CONFIG.roles.storeSalesEditor||['代表取締役','管理者'],ME);}
-// 1店舗の数字。技術売上を meimei_sales に入れておくと、総売上・店販比率の計算を個人と共通で使える
+function numOrNull(v){return v==null||v===''?null:Number(v);}
+// 材料比率：入力値 → なければ 材料費÷技術売上
+function matRatioOf(ratio,cost,tech){
+  if(ratio!=null)return Number(ratio);
+  if(cost!=null&&tech)return Math.round(cost/tech*1000)/10;
+  return null;
+}
+// 1店舗の数字。総売上を「meimei_sales＝総売上－店販」に入れておくと、並べ替え・店販比率の計算を個人と共通で使える
 function storeFig(storeId){
   const r=storeSales[storeId]||{};
-  const d={_entered:!!storeSales[storeId]||materialCost[storeId]!=null};
-  d.tech_sales=Number(r.tech_sales||0);
-  d.tanden=Number(r.tanden||0);
-  d.milbon_id=Number(r.milbon_id||0);
+  const d={_entered:!!storeSales[storeId]||materialCost[storeId]!=null||materialRatio[storeId]!=null};
+  d.total_sales=Number(r.total_sales||0);
+  d.tech_sales=numOrNull(r.tech_sales);
+  d.tanden=numOrNull(r.tanden);
+  d.milbon_amount=Number(r.milbon_amount||0);
   d.ticket_count=Number(r.ticket_count||0);
-  d.return_new=r.return_new==null?null:Number(r.return_new);
-  d.cost=materialCost[storeId]==null?null:Number(materialCost[storeId]);
-  d.meimei_sales=d.tech_sales;d.free_sales=0;
+  d.return_new=numOrNull(r.return_new);
+  d.includes_eye=!!r.includes_eye;
+  d.cost=numOrNull(materialCost[storeId]);
+  d.ratio_input=numOrNull(materialRatio[storeId]);
+  d.mat_ratio=matRatioOf(d.ratio_input,d.cost,d.tech_sales);
+  d.meimei_sales=d.total_sales-(d.tanden||0);d.free_sales=0;
   return d;
 }
-// 複数店舗の合計（新規再来は入力のある店舗の平均、材料費は入力のある店舗の合計）
+// 複数店舗の合計（新規再来・材料比率は入力のある店舗の平均、材料費・技術売上は入力のある店舗の合計）
 function sumStoreFigs(ids){
-  const a={_entered:false,tech_sales:0,tanden:0,milbon_id:0,ticket_count:0,cost:null,_costN:0};
-  const rn=[];
+  const a={_entered:false,total_sales:0,tech_sales:null,tanden:null,milbon_amount:0,ticket_count:0,cost:null,_costN:0,_eye:[]};
+  const rn=[],mr=[];
   ids.forEach(function(id){
     const d=storeFig(id);
     a._entered=a._entered||d._entered;
-    ['tech_sales','tanden','milbon_id','ticket_count'].forEach(function(f){a[f]+=d[f];});
+    ['total_sales','milbon_amount','ticket_count'].forEach(function(f){a[f]+=d[f];});
+    if(d.tanden!=null){a.tanden=(a.tanden||0)+d.tanden;a._tTotal=(a._tTotal||0)+d.total_sales;}
+    if(d.tech_sales!=null)a.tech_sales=(a.tech_sales||0)+d.tech_sales;
     if(d.return_new!=null)rn.push(d.return_new);
+    if(d.mat_ratio!=null)mr.push(d.mat_ratio);
     if(d.cost!=null){a.cost=(a.cost||0)+d.cost;a._costN++;}
+    if(d.includes_eye)a._eye.push(id);
   });
   a.return_new=avg1(rn);
-  a.meimei_sales=a.tech_sales;a.free_sales=0;
+  a.mat_ratio=avg1(mr);a._mrN=mr.length;
+  // 店販比率は「店販売上を入力した店舗」の総売上で割る（未入力の店舗の総売上で薄まらないように）
+  a.meimei_sales=(a._tTotal||0)-(a.tanden||0);a.free_sales=0;
   return a;
 }
 async function loadStoreSales(){
@@ -546,13 +571,14 @@ async function loadStoreSales(){
 }
 async function saveStoreSales(storeId,field,val){
   const {error}=await sb.from('store_sales').upsert(
-    {month:currentMonth,store:storeId,[field]:val,updated_at:new Date().toISOString()},
+    {month:currentMonth,store:storeId,[field]:val,source:'manual',updated_at:new Date().toISOString()},
     {onConflict:'month,store'});
   if(error)alert('保存に失敗しました: '+error.message);
 }
-async function saveStoreCost(storeId,val){
+// 材料費（cost）・材料比率（ratio）は material_ratio に保存
+async function saveStoreMaterial(storeId,col,val){
   const {error}=await sb.from('material_ratio').upsert(
-    {month:currentMonth,store:storeId,cost:val,updated_at:new Date().toISOString()},
+    {month:currentMonth,store:storeId,[col]:val,updated_at:new Date().toISOString()},
     {onConflict:'month,store'});
   if(error)alert('保存に失敗しました: '+error.message);
 }
@@ -562,6 +588,10 @@ function getStoreRows(){
     const m=membersOfStore(id);
     return {id:id,label:storeLabel(id),count:m.length,d:storeFig(id),staff:aggregate(m)};
   });
+}
+function eyeNote(ids){
+  if(!ids.length)return '';
+  return '※アイ込みの数字を含む：'+ids.map(storeLabel).join('・');
 }
 
 function sortBy(field,asc){
@@ -659,36 +689,45 @@ function refreshRowAuto(sid){
 function staffNoteHtml(r){
   const sr=calcResult(r.staff);
   if(!sr&&!r.d._entered)return '';
-  let h='スタッフ計 '+(sr?inTax(sr).toLocaleString():'—');
-  const res=calcResult(r.d);
+  let h='スタッフ計 '+(sr?Math.round(sr).toLocaleString()+'（税抜）':'なし');
+  const res=r.d.total_sales;
   if(res&&sr){
-    const diff=inTax(res)-inTax(sr);
+    const diff=Math.round(res)-Math.round(sr);
     if(diff!==0)h+=' <span style="color:var(--red)">差 '+(diff>0?'+':'')+diff.toLocaleString()+'</span>';
     else h+=' <span style="color:var(--green)">一致</span>';
   }
   return '<span class="store-badge" id="staffnote-'+r.key+'">'+h+'</span>';
 }
-// 表示だけのセル（金額は税込の大きい数字＋税抜の小さい数字）
+function eyeBadge(d,key){
+  return '<span class="eye-badge" id="eye-'+key+'"'+(d.includes_eye?'':' style="display:none"')+'>アイ込み</span>';
+}
+// 表示だけのセル（金額は税抜）
 function storeValueCell(c,d,key){
-  const id=key?' id="'+c.f+'-'+key+'"':'';
-  if(c.f==='result')return moneyCell(calcResult(d),key?'result-'+key:null);
   if(c.f==='tanden_ratio')return '<td><span class="auto-val"'+(key?' id="tratio-'+key+'"':'')+'>'+ratioText(d)+'</span></td>';
   const v=d[c.f];
-  if(c.pct)return '<td><span class="auto-val"'+id+'>'+(v!=null?Number(v).toFixed(1)+'%':'—')+'</span></td>';
-  if(c.int)return '<td><span class="auto-val"'+id+'>'+(v?Number(v).toLocaleString():'—')+'</span></td>';
-  if(c.material)return '<td><span class="auto-val"'+id+'>'+(v!=null?Math.round(v).toLocaleString():'—')+'</span><span class="auto-val-sub">'+(v!=null?'(税抜)':'')+'</span></td>';
-  return moneyCell(v,null);
+  if(c.pct)return '<td><span class="auto-val">'+(v!=null?Number(v).toFixed(1)+'%':'—')+'</span></td>';
+  if(c.int)return '<td><span class="auto-val">'+(v?Number(v).toLocaleString():'—')+'</span></td>';
+  return '<td><span class="auto-val">'+(v!=null&&v!==0?Math.round(v).toLocaleString():'—')+'</span></td>';
+}
+function storeInputValue(r,c){
+  if(c.mat==='cost')return materialCost[r.id];
+  if(c.mat==='ratio')return materialRatio[r.id];
+  return (storeSales[r.id]||{})[c.f];
 }
 function storeRowHtml(r,editable){
   const d=r.d,key=r.key;
-  let row='<tr><td><button class="store-link" onclick="switchStore(\''+esc(r.id)+'\')">'+esc(r.label)+'</button><span class="pos-badge">'+r.count+'名</span>'+staffNoteHtml(r)+'</td>';
+  let row='<tr><td><button class="store-link" onclick="switchStore(\''+esc(r.id)+'\')">'+esc(r.label)+'</button><span class="pos-badge">'+r.count+'名</span>'+eyeBadge(d,key)+staffNoteHtml(r)+'</td>';
   STORE_COLUMNS.forEach(function(c){
     if(c.auto||!editable){row+=storeValueCell(c,d,key);return;}
-    const raw=c.material?materialCost[r.id]:(storeSales[r.id]||{})[c.f];
+    const raw=storeInputValue(r,c);
     const val=raw==null?'':raw;
-    const ph=c.pct?'0.0':'0';
-    const step=c.pct?' step="0.1"':(c.int?' step="1" inputmode="numeric"':'');
-    row+='<td><input type="number" class="num-inp'+(c.pct?' pct':'')+'" data-store="'+esc(r.id)+'" data-key="'+key+'" data-f="'+c.f+'"'+(c.material?' data-mat="1"':'')+' placeholder="'+ph+'"'+step+' value="'+esc(val)+'"></td>';
+    // 材料比率は空欄のとき、自動計算の値（材料費÷技術売上）をうすく出す
+    let ph=c.pct?'0.0':'0';
+    if(c.mat==='ratio'&&raw==null&&d.mat_ratio!=null)ph=String(d.mat_ratio);   // 空欄のときは自動計算の値をうすく表示
+    const step=c.pct?' step="0.1"':(c.int?' step="1" inputmode="numeric"':' inputmode="numeric"');
+    const money=!c.pct&&!c.int;
+    const tip=c.mat==='ratio'?' title="空欄のときは 材料費÷技術売上 で自動計算"':'';
+    row+='<td><input type="number"'+tip+' class="num-inp'+(c.pct?' pct':'')+(money?' money':'')+(c.mat==='ratio'?' mat-ratio':'')+'" data-store="'+esc(r.id)+'" data-key="'+key+'" data-f="'+c.f+'"'+(c.mat?' data-mat="'+c.mat+'"':'')+' placeholder="'+ph+'"'+step+' value="'+esc(val)+'"></td>';
   });
   return row+'</tr>';
 }
@@ -708,73 +747,66 @@ function renderStoreTable(tb,colspan){
   const byKey={};rows.forEach(function(r){byKey[r.key]=r;});
   tb.querySelectorAll('input[data-store]').forEach(function(el){
     el.addEventListener('change',function(){
-      const st=el.dataset.store,key=el.dataset.key,field=el.dataset.f,val=el.value===''?null:Number(el.value);
-      if(el.dataset.mat){
-        if(val==null)delete materialCost[st];else materialCost[st]=val;
-      }else{
+      const st=el.dataset.store,key=el.dataset.key,field=el.dataset.f,mat=el.dataset.mat,val=el.value===''?null:Number(el.value);
+      if(mat==='cost'){if(val==null)delete materialCost[st];else materialCost[st]=val;}
+      else if(mat==='ratio'){if(val==null)delete materialRatio[st];else materialRatio[st]=val;}
+      else{
         if(!storeSales[st])storeSales[st]={};
         storeSales[st][field]=val;
       }
       // その行の自動計算・スタッフ計の差・合計行・合計パネルだけ更新（入力中の欄はそのまま）
       const r=byKey[key];r.d=storeFig(st);
-      const res=calcResult(r.d);
-      document.getElementById('result-'+key).textContent=res?inTax(res).toLocaleString():'—';
-      document.getElementById('result-'+key+'-sub').textContent=res?'(税抜 '+Math.round(res).toLocaleString()+')':'';
       document.getElementById('tratio-'+key).textContent=ratioText(r.d);
+      const mr=el.closest('tr').querySelector('input.mat-ratio');
+      if(mr&&mr.value==='')mr.placeholder=r.d.mat_ratio!=null?String(r.d.mat_ratio):'0.0';
       const note=document.getElementById('staffnote-'+key);
       const html=staffNoteHtml(r);
       if(note)note.outerHTML=html;
       else if(html)el.closest('tr').firstElementChild.insertAdjacentHTML('beforeend',html);
       document.getElementById('store-sum-row').outerHTML=storeSumRowHtml();
       updateTotals();
-      if(el.dataset.mat)saveStoreCost(st,val);else saveStoreSales(st,field,val);
+      if(mat)saveStoreMaterial(st,mat,val);else saveStoreSales(st,field,val);
     });
   });
 }
 
-// 店舗の材料比率：材料費が入っていれば 材料費÷店舗の総売上（どちらも税抜）、なければ手入力の比率
-function effectiveMaterialRatio(storeId){
-  const cost=materialCost[storeId];
-  if(cost!=null){
-    const r=calcResult(storeFig(storeId));
-    return r?Math.round(cost/r*1000)/10:null;
-  }
-  const v=materialRatio[storeId];
-  return v!=null?Number(v):null;
-}
+// 店舗の材料比率（他のページ・古い呼び出し用）
+function effectiveMaterialRatio(storeId){return storeFig(storeId).mat_ratio;}
 
-// 合計パネル：店舗の数字（事務所入力）。下にスタッフ入力の合計（店舗1つのときは差も）
+// 合計パネル：店舗の数字（事務所入力・CSV取り込み）。下にスタッフ入力の合計（店舗1つのときは差も）
 function updateTotals(){
   const ids=isSingleStore(currentStore)?[currentStore]:storesInFilter(currentStore);
   const a=sumStoreFigs(ids);
-  const result=calcResult(a);
+  const multi=!isSingleStore(currentStore);
   function money(id,v){
-    document.getElementById(id).textContent=v?yen(v*(1+TAX_RATE)):'—';
-    document.getElementById(id+'-sub').textContent=v?'(税抜 '+yen(v)+')':'';
+    document.getElementById(id).textContent=v?yen(v):'—';
+    const sub=document.getElementById(id+'-sub');if(sub)sub.textContent=v?'(税込 '+yen(v*(1+TAX_RATE))+')':'';
   }
-  money('tot-result',result);
+  money('tot-result',a.total_sales);
   money('tot-tech',a.tech_sales);
   money('tot-tanden',a.tanden);
-  document.getElementById('tot-milbon').textContent=a.milbon_id?a.milbon_id.toLocaleString():'—';
+  money('tot-milbon',a.milbon_amount);
   document.getElementById('tot-ticket').textContent=a.ticket_count?a.ticket_count.toLocaleString()+'枚':'—';
   document.getElementById('tot-tratio').textContent=ratioText(a);
+  document.getElementById('tot-mratio').textContent=a.mat_ratio!=null?a.mat_ratio.toFixed(1)+'%':'—';
   document.getElementById('tot-rnew').textContent=a.return_new!=null?a.return_new.toFixed(1)+'%':'—';
-  document.getElementById('tot-rnew-sub').textContent=(a.return_new!=null&&!isSingleStore(currentStore))?'店舗の平均':'';
+  document.getElementById('tot-rnew-sub').textContent=(a.return_new!=null&&multi)?'店舗の平均':'';
   document.getElementById('tot-cost').textContent=a.cost!=null?yen(a.cost):'—';
-  document.getElementById('tot-cost-sub').textContent=a.cost!=null?(isSingleStore(currentStore)?'(税抜)':'(税抜・'+a._costN+'店舗)'):'';
+  document.getElementById('tot-cost-sub').textContent=a.cost!=null&&multi?a._costN+'店舗の合計':'';
 
-  // スタッフ入力の合計（参考）
+  // スタッフ入力の合計（参考）・アイ込みの注意
   const staff=calcResult(aggregate(getStaffList()));
-  let note='店舗の数字（事務所入力）';
+  let note='店舗の数字（税抜）';
   if(staff){
-    note+='　／　スタッフ入力の合計 '+yen(staff*(1+TAX_RATE));
+    note+='　／　スタッフ入力の合計 '+yen(staff);
     // 差は店舗を1つ選んでいるときだけ（複数店舗では未入力の店舗の分までずれて見えるため。店舗ごとの差は一覧の各行に表示）
-    if(result&&isSingleStore(currentStore)){
-      const diff=inTax(result)-inTax(staff);
+    if(a.total_sales&&!multi){
+      const diff=Math.round(a.total_sales)-Math.round(staff);
       note+=diff===0?'（一致）':'（差 '+(diff>0?'+':'')+diff.toLocaleString()+'）';
     }
   }
-  document.getElementById('tot-note').textContent=note;
+  const eye=eyeNote(a._eye);
+  document.getElementById('tot-note').textContent=note+(eye?'　'+eye:'');
 }
 
 // ===== 役職別基準値 =====
@@ -873,7 +905,6 @@ document.querySelectorAll('.modal-overlay').forEach(function(el){
   if(!ME)return;
   if(canEditSettings()){
     document.getElementById('btn-productivity').style.display='';
-    document.getElementById('btn-material').style.display='';
   }
   const {data}=await sb.from('students').select('*').order('created_at');
   students=(data||[]).filter(function(s){return s.is_active!==false&&!EXCLUDE_ROLES.includes(s.position);});
@@ -885,7 +916,8 @@ document.querySelectorAll('.modal-overlay').forEach(function(el){
   currentMonth=months.includes(thisMonth)?thisMonth:months[0];
   document.getElementById('month-sel').value=currentMonth;
   // 最初の表示：店舗に所属している人は自分の店舗のスタッフ（入力できる画面）、全店共通の人は店舗の一覧
-  currentStore=defaultStoreFilter(ME);
+  if(canEditStoreSales())document.getElementById('btn-import').style.display='';
+  currentStore=canEditStoreSales()&&canViewAllStores()?'all':defaultStoreFilter(ME);
   viewMode=isSingleStore(currentStore)?'person':'store';
   renderView();
   await onMonthChange();
