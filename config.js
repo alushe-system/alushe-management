@@ -42,6 +42,15 @@ const APP_CONFIG = {
     { id: '船堀アイ',         label: '船堀アイ',         group: 'eye' },
   ],
 
+  // 拠点（同じ場所のヘア＋アイ・ネイルを合算して見るまとまり）
+  // id = 範囲の切り替えで使う名前 / label = 表示名 / stores = 合算する店舗id
+  // 数字はヘア・アイそれぞれで入力し、拠点の数字はシステムで合算して表示する
+  sites: [
+    { id: '平井',   label: '平井全体',   stores: ['平井', '平井アイ・ネイル'] },
+    { id: '錦糸町', label: '錦糸町全体', stores: ['錦糸町', '錦糸町アイ'] },
+    { id: '船堀',   label: '船堀全体',   stores: ['アルーシェ船堀', '船堀スカイ', '船堀アイ'] },
+  ],
+
   // 役職（上位から順に。スタッフ一覧・数値管理の役職順に使う）
   positions: [
     '代表取締役', 'FCオーナー', 'マネージャー', 'サブマネージャー', '店長',
@@ -294,7 +303,7 @@ document.addEventListener('click', function (e) {
 });
 
 // ===== 店舗の切り替え（全ページ共通） =====
-// 値の形：'all'（全店舗）/ 'group:hair' などのグループ全体 / 店舗id（単独店舗）
+// 値の形：'all'（全店舗）/ 'group:hair' などのグループ全体 / 'site:平井' などの拠点（ヘア＋アイ）/ 店舗id（単独店舗）
 function storeGroupOf(storeId) {
   const st = APP_CONFIG.stores.find(function (x) { return x.id === storeId; });
   return st ? st.group : null;
@@ -302,10 +311,17 @@ function storeGroupOf(storeId) {
 function isSingleStore(filter) {
   return APP_CONFIG.stores.some(function (x) { return x.id === filter; });
 }
-// 店舗idが、選択中の切り替え（全店舗・グループ・単独店舗）に含まれるか
+function siteOf(siteId) {
+  return (APP_CONFIG.sites || []).find(function (x) { return x.id === siteId; }) || null;
+}
+// 店舗idが、選択中の切り替え（全店舗・グループ・拠点・単独店舗）に含まれるか
 function storeFilterMatches(filter, storeId) {
   if (filter === 'all') return true;
   if (String(filter).indexOf('group:') === 0) return storeGroupOf(storeId) === filter.slice(6);
+  if (String(filter).indexOf('site:') === 0) {
+    const site = siteOf(filter.slice(5));
+    return !!site && site.stores.indexOf(storeId) !== -1;
+  }
   return storeId === filter;
 }
 // 選択中の切り替えに含まれる店舗idの一覧
@@ -319,7 +335,21 @@ function storeFilterLabel(filter) {
     const g = APP_CONFIG.storeGroups.find(function (x) { return x.id === filter.slice(6); });
     return g ? (g.short || g.label) + '全体' : '';
   }
+  if (String(filter).indexOf('site:') === 0) {
+    const site = siteOf(filter.slice(5));
+    return site ? site.label : '';
+  }
   return storeLabel(filter);
+}
+// 拠点の<optgroup>（範囲のプルダウン用）。sites が無ければ空
+function siteOptionsHtml(current) {
+  const list = APP_CONFIG.sites || [];
+  if (!list.length) return '';
+  let h = '<optgroup label="拠点（ヘア＋アイ）">';
+  list.forEach(function (s) {
+    h += '<option value="site:' + s.id + '"' + (current === 'site:' + s.id ? ' selected' : '') + '>' + s.label + '</option>';
+  });
+  return h + '</optgroup>';
 }
 // 初期表示：ログインした人の所属店舗（全店共通などは全店舗）
 function defaultStoreFilter(me) {
@@ -327,7 +357,8 @@ function defaultStoreFilter(me) {
 }
 // 切り替え部品を描画する。onChange(新しい値) が呼ばれる
 // 1つのプルダウンにまとめる：全店舗 → ヘア（全体＋各店舗） → アイ・ネイル（全体＋各店舗）
-function renderStoreFilter(containerId, current, onChange) {
+// opts.withSites = true のときは最後に拠点（ヘア＋アイ）も出す
+function renderStoreFilter(containerId, current, onChange, opts) {
   const el = document.getElementById(containerId);
   if (!el) return;
   window.__storeFilterCb = onChange;
@@ -345,6 +376,7 @@ function renderStoreFilter(containerId, current, onChange) {
     });
     h += '</optgroup>';
   });
+  if (opts && opts.withSites) h += siteOptionsHtml(current);
   h += '</select>';
   el.innerHTML = h;
 }
