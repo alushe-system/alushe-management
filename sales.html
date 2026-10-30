@@ -143,7 +143,7 @@ tr.sum-row td:first-child{background:#f5f0eb;}
   .tp-body{display:flex;gap:22px;align-items:stretch;}
   .tp-hero{border-bottom:none;border-right:1px solid rgba(232,213,176,0.15);margin:0;padding:6px 22px 6px 0;min-width:220px;display:flex;flex-direction:column;justify-content:center;}
   .tp-hero-val{font-size:36px;}
-  .total-grid{flex:1;grid-template-columns:repeat(3,1fr);}
+  .total-grid{flex:1;grid-template-columns:repeat(4,1fr);}
   .total-item{padding:10px 12px;}
   .total-item-val{font-size:16px;}
 }
@@ -243,6 +243,8 @@ tr.sum-row td:first-child{background:#f5f0eb;}
         <div class="total-item"><div class="total-item-label">店販売上</div><div class="total-item-val" id="tot-tanden">—</div><div class="total-item-sub" id="tot-tanden-sub"></div></div>
         <div class="total-item"><div class="total-item-label">ミルボンID</div><div class="total-item-val" id="tot-milbon">—</div><div class="total-item-sub" id="tot-milbon-sub"></div></div>
         <div class="total-item"><div class="total-item-label">チケット販売</div><div class="total-item-val" id="tot-ticket">—</div></div>
+        <div class="total-item"><div class="total-item-label">新規客数</div><div class="total-item-val" id="tot-newc">—</div></div>
+        <div class="total-item"><div class="total-item-label">再来客数</div><div class="total-item-val" id="tot-repc">—</div></div>
         <div class="total-item"><div class="total-item-label">新規再来</div><div class="total-item-val" id="tot-rnew">—</div><div class="total-item-sub" id="tot-rnew-sub"></div></div>
         <div class="total-item"><div class="total-item-label">材料費</div><div class="total-item-val" id="tot-cost">—</div><div class="total-item-sub" id="tot-cost-sub"></div></div>
       </div>
@@ -508,11 +510,13 @@ const STORE_COLUMNS=[
   {f:'milbon_amount',label:'ミルボンID（円）'},
   {f:'ticket_count',label:'チケット販売枚数',int:true},
   {f:'tanden_ratio',label:'店販比率',auto:true},
+  {f:'new_clients',label:'新規客数',int:true},
+  {f:'repeat_clients',label:'再来客数',int:true},
   {f:'return_new',label:'新規再来',pct:true},
   {f:'cost',label:'材料費',mat:'cost'},
   {f:'mat_ratio',label:'材料比率',mat:'ratio',pct:true},
 ];
-const STORE_FIELDS=['total_sales','tech_sales','tanden','milbon_amount','ticket_count','return_new','includes_eye','source'];
+const STORE_FIELDS=['total_sales','tech_sales','tanden','milbon_amount','ticket_count','new_clients','repeat_clients','return_new','includes_eye','source'];
 let storeSales={};   // storeSales[店舗id] = { 各項目, db_id }
 function canEditStoreSales(){return hasAccess(APP_CONFIG.roles.storeSalesEditor||['代表取締役','管理者'],ME);}
 function numOrNull(v){return v==null||v===''?null:Number(v);}
@@ -531,6 +535,8 @@ function storeFig(storeId){
   d.tanden=numOrNull(r.tanden);
   d.milbon_amount=Number(r.milbon_amount||0);
   d.ticket_count=Number(r.ticket_count||0);
+  d.new_clients=Number(r.new_clients||0);
+  d.repeat_clients=Number(r.repeat_clients||0);
   d.return_new=numOrNull(r.return_new);
   d.includes_eye=!!r.includes_eye;
   d.cost=numOrNull(materialCost[storeId]);
@@ -541,12 +547,12 @@ function storeFig(storeId){
 }
 // 複数店舗の合計（新規再来・材料比率は入力のある店舗の平均、材料費・技術売上は入力のある店舗の合計）
 function sumStoreFigs(ids){
-  const a={_entered:false,total_sales:0,tech_sales:null,tanden:null,milbon_amount:0,ticket_count:0,cost:null,_costN:0,_eye:[]};
+  const a={_entered:false,total_sales:0,tech_sales:null,tanden:null,milbon_amount:0,ticket_count:0,new_clients:0,repeat_clients:0,cost:null,_costN:0,_eye:[]};
   const rn=[],mr=[];
   ids.forEach(function(id){
     const d=storeFig(id);
     a._entered=a._entered||d._entered;
-    ['total_sales','milbon_amount','ticket_count'].forEach(function(f){a[f]+=d[f];});
+    ['total_sales','milbon_amount','ticket_count','new_clients','repeat_clients'].forEach(function(f){a[f]+=d[f];});
     if(d.tanden!=null){a.tanden=(a.tanden||0)+d.tanden;a._tTotal=(a._tTotal||0)+d.total_sales;}
     if(d.tech_sales!=null)a.tech_sales=(a.tech_sales||0)+d.tech_sales;
     if(d.return_new!=null)rn.push(d.return_new);
@@ -788,6 +794,8 @@ function updateTotals(){
   document.getElementById('tot-ticket').textContent=a.ticket_count?a.ticket_count.toLocaleString()+'枚':'—';
   document.getElementById('tot-tratio').textContent=ratioText(a);
   document.getElementById('tot-mratio').textContent=a.mat_ratio!=null?a.mat_ratio.toFixed(1)+'%':'—';
+  document.getElementById('tot-newc').textContent=a.new_clients?a.new_clients.toLocaleString()+'名':'—';
+  document.getElementById('tot-repc').textContent=a.repeat_clients?a.repeat_clients.toLocaleString()+'名':'—';
   document.getElementById('tot-rnew').textContent=a.return_new!=null?a.return_new.toFixed(1)+'%':'—';
   document.getElementById('tot-rnew-sub').textContent=(a.return_new!=null&&multi)?'店舗の平均':'';
   document.getElementById('tot-cost').textContent=a.cost!=null?yen(a.cost):'—';
