@@ -88,7 +88,7 @@ tr.key td{background:#fdf8f0;}
 
   <div class="card" id="preview-card" style="display:none">
     <div class="card-title"><span class="step">3</span>内容を確認して保存</div>
-    <div class="card-sub">「保存する値」が数値管理に入ります（税抜・小数点以下は四捨五入）。すでに入っている数字は上書きされます。ミルボンID・チケット・新規再来・材料はCSVにないので変わりません。</div>
+    <div class="card-sub">「保存する値」が数値管理に入ります（税抜・小数点以下は四捨五入）。すでに入っている数字は上書きされます。ミルボンID・チケット・新規再来・材料はCSVにないので変わりません（新規客数・再来客数は人数なのでそのまま保存）。</div>
     <div id="preview"></div>
     <button class="btn btn-dark" id="save-btn" onclick="saveAll()" disabled>この内容で保存する</button>
     <button class="btn btn-ghost" onclick="location.href='sales.html'">数値管理に戻る</button>
@@ -101,7 +101,8 @@ tr.key td{background:#fdf8f0;}
       <li>総売上＝純売上－チケット使用分</li>
       <li>店販売上＝商品（商品割引があれば差し引き）</li>
       <li>技術売上＝純売上－店販売上－チケット使用分</li>
-      <li>CSVの金額は税込なので、1.1で割って税抜にして保存します</li>
+      <li>新規客数・再来客数＝「売上集計」の新規客数・再来客数</li>
+    <li>CSVの金額は税込なので、1.1で割って税抜にして保存します</li>
     </ul>
   </div>
 </div>
@@ -209,7 +210,7 @@ function computeBM(){
     const p=payByMonth[month];
     const net=num(r['純売上']);
     const goods=num(r['商品'])+num(r['商品割引']);   // 商品割引はマイナスの値
-    const res={month:month,net:net,goods:goods,hasPay:!!p,warnings:[]};
+    const res={month:month,net:net,goods:goods,newc:num(r['新規客数']),repc:num(r['再来客数']),hasPay:!!p,warnings:[]};
     if(p){
       const ticketCols=Object.keys(p).filter(function(c){return c.indexOf('チケット')!==-1;});
       res.ticket=ticketCols.reduce(function(t,c){return t+num(p[c]);},0);
@@ -258,13 +259,16 @@ async function renderPreview(){
     [['総売上',x.total,'total_sales'],['技術売上',x.tech,'tech_sales'],['店販売上',x.goods,'tanden']].forEach(function(r){
       h+='<tr class="key"><td>'+r[0]+'</td><td>'+fmt(r[1])+'</td><td class="save">'+fmt(exTax(r[1]))+'</td><td class="cur">'+fmt(cur[r[2]])+'</td></tr>';
     });
+    [['新規客数',x.newc,'new_clients'],['再来客数',x.repc,'repeat_clients']].forEach(function(r){
+      h+='<tr><td>'+r[0]+'</td><td>'+fmt(r[1])+'名</td><td class="save">'+fmt(r[1])+'名</td><td class="cur">'+(cur[r[2]]!=null?fmt(cur[r[2]])+'名':'—')+'</td></tr>';
+    });
     h+='</tbody></table>';
     h+='<div class="detail">純売上 '+fmt(x.net)+' － チケット使用分 '+fmt(x.ticket)+' ＝ 総売上 '+fmt(x.total)+'（税込）';
     if(x.ticketCols.length)h+='<br>チケット内訳：'+esc(x.ticketCols.join('、'));
     if(cur.includes_eye)h+='<br><span style="color:var(--red)">今の値は「アイ込み」の数字です。保存するとヘアだけの数字に置き換わり、アイ込みの印も外れます。</span>';
     h+='</div></div>';
     if(!x.warnings.length){
-      computed.push({month:x.month,store:store,total_sales:exTax(x.total),tech_sales:exTax(x.tech),tanden:exTax(x.goods)});
+      computed.push({month:x.month,store:store,total_sales:exTax(x.total),tech_sales:exTax(x.tech),tanden:exTax(x.goods),new_clients:x.newc,repeat_clients:x.repc});
       canSave=true;
     }
   });
@@ -277,7 +281,7 @@ async function saveAll(){
   if(!computed.length)return;
   const store=computed[0].store;
   const months=computed.map(function(c){return c.month;});
-  if(!confirm(storeLabel(store)+' の '+months.join('、')+' の総売上・技術売上・店販売上を保存します。よろしいですか？'))return;
+  if(!confirm(storeLabel(store)+' の '+months.join('、')+' の総売上・技術売上・店販売上・新規客数・再来客数を保存します。よろしいですか？'))return;
   const rows=computed.map(function(c){
     return Object.assign({},c,{includes_eye:false,source:'csv',updated_at:new Date().toISOString()});
   });
