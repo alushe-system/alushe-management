@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CSV取り込み</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>document.write('<script src="config.js?v='+Date.now()+'"><\/script>');</script>
+<style>
+:root{--cream:#faf6f0;--gold:#c9a96e;--gold-light:#e8d5b0;--dark:#1a1410;--mid:#7a6a58;--soft:#c4b49e;--accent:#8b5e3c;--green:#4a7c59;--red:#c0392b;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--cream);font-family:'Noto Sans JP',sans-serif;color:var(--dark);min-height:100vh;}
+.main{max-width:760px;margin:0 auto;padding:14px 12px 80px;}
+.card{background:white;border:1px solid var(--gold-light);border-radius:16px;padding:16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(26,20,16,0.04);}
+.card-title{font-size:13px;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:8px;}
+.step{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--dark);color:var(--gold-light);font-size:11px;font-weight:700;flex-shrink:0;}
+.card-sub{font-size:11px;color:var(--mid);margin-bottom:12px;line-height:1.6;}
+.field{margin-bottom:12px;}
+.field label{display:block;font-size:11px;color:var(--mid);font-weight:700;margin-bottom:5px;letter-spacing:0.5px;}
+.sel{width:100%;height:44px;font-family:'Noto Sans JP',sans-serif;font-size:15px;font-weight:700;padding:0 34px 0 12px;border-radius:12px;border:1.5px solid var(--gold);outline:none;color:var(--dark);appearance:none;-webkit-appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='7'%3E%3Cpath d='M0 0l6 7 6-7z' fill='%23c9a96e'/%3E%3C/svg%3E") no-repeat right 14px center;}
+.row2{display:grid;grid-template-columns:1fr;gap:0 10px;}
+@media(min-width:600px){.row2{grid-template-columns:1fr 1fr;}}
+.drop{display:block;border:2px dashed var(--gold-light);border-radius:14px;padding:22px 12px;text-align:center;cursor:pointer;background:#fdfbf8;}
+.drop b{display:block;font-size:14px;margin-bottom:4px;}
+.drop span{font-size:11px;color:var(--mid);}
+.drop input{display:none;}
+.file-list{margin-top:10px;display:flex;flex-direction:column;gap:6px;}
+.file-item{font-size:12px;padding:8px 10px;border-radius:10px;background:#f5f0eb;display:flex;justify-content:space-between;gap:8px;align-items:center;}
+.file-item.ok{background:#eef5f0;color:#2f5a3c;}
+.file-item.ng{background:#fbecea;color:var(--red);}
+.file-kind{font-weight:700;white-space:nowrap;}
+.file-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
+.msg{font-size:12px;padding:10px 12px;border-radius:10px;margin-bottom:10px;line-height:1.6;}
+.msg.warn{background:#fff6e5;color:#8a5a00;}
+.msg.err{background:#fbecea;color:var(--red);}
+.msg.ok{background:#eef5f0;color:#2f5a3c;}
+.month-block{border:1px solid #efe6da;border-radius:12px;padding:12px;margin-bottom:12px;}
+.month-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px;flex-wrap:wrap;}
+.month-head b{font-size:15px;}
+.chk{font-size:11px;color:var(--green);font-weight:700;}
+.chk.ng{color:var(--red);}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;}
+th{font-size:10px;color:var(--mid);font-weight:500;text-align:right;padding:4px 6px;border-bottom:1px solid #efe6da;white-space:nowrap;}
+th:first-child{text-align:left;}
+td{font-size:13px;padding:7px 6px;border-bottom:1px solid #f5efe7;text-align:right;white-space:nowrap;}
+td:first-child{text-align:left;font-weight:600;}
+td.save{font-weight:700;color:var(--dark);}
+td.cur{color:var(--mid);font-size:12px;}
+td.calc{font-size:10px;color:var(--soft);text-align:left;white-space:normal;font-weight:400;}
+tr.key td{background:#fdf8f0;}
+.detail{font-size:11px;color:var(--mid);margin-top:8px;line-height:1.7;}
+.btn{font-family:'Noto Sans JP',sans-serif;font-size:14px;font-weight:700;height:48px;border-radius:12px;border:none;cursor:pointer;width:100%;}
+.btn-dark{background:var(--dark);color:var(--gold-light);}
+.btn-dark:disabled{opacity:0.35;cursor:not-allowed;}
+.btn-ghost{background:white;border:1.5px solid var(--gold-light);color:var(--mid);height:40px;font-size:12px;margin-top:8px;}
+.note-list{font-size:11px;color:var(--mid);line-height:1.8;padding-left:16px;}
+</style>
+</head>
+<body>
+<div id="app-header"></div>
+
+<div class="main">
+  <div class="card">
+    <div class="card-title"><span class="step">1</span>取り込む店舗とレジ</div>
+    <div class="card-sub">CSVには店舗名が入っていないので、どの店舗のCSVかを選んでください。ヘアとアイは別の店舗として取り込みます。</div>
+    <div class="row2">
+      <div class="field"><label>店舗</label><select class="sel" id="store-sel" onchange="renderPreview()"></select></div>
+      <div class="field"><label>レジ</label>
+        <select class="sel" id="system-sel" onchange="onSystemChange()">
+          <option value="bm">ビューティーメリット</option>
+          <option value="sb" disabled>サロンボード（準備中）</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="step">2</span>CSVファイルを選ぶ</div>
+    <div class="card-sub">ビューティーメリットの「売上集計（年月別）」と「支払い方法別」の<b>2つのCSV</b>を一緒に選んでください。どちらのファイルかは自動で見分けます。複数の月が入ったCSVでもOKです。</div>
+    <label class="drop">
+      <b>📄 CSVファイルを選ぶ</b>
+      <span>2つまとめて選べます</span>
+      <input type="file" id="file-inp" accept=".csv,text/csv" multiple onchange="onFiles(this.files)">
+    </label>
+    <div class="file-list" id="file-list"></div>
+  </div>
+
+  <div class="card" id="preview-card" style="display:none">
+    <div class="card-title"><span class="step">3</span>内容を確認して保存</div>
+    <div class="card-sub">「保存する値」が数値管理に入ります（税抜・小数点以下は四捨五入）。すでに入っている数字は上書きされます。ミルボンID・チケット・新規再来・材料はCSVにないので変わりません。</div>
+    <div id="preview"></div>
+    <button class="btn btn-dark" id="save-btn" onclick="saveAll()" disabled>この内容で保存する</button>
+    <button class="btn btn-ghost" onclick="location.href='sales.html'">数値管理に戻る</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">計算のしかた（ビューティーメリット）</div>
+    <ul class="note-list">
+      <li>チケット使用分＝「支払い方法別」のチケットの列の合計</li>
+      <li>総売上＝純売上－チケット使用分</li>
+      <li>店販売上＝商品（商品割引があれば差し引き）</li>
+      <li>技術売上＝純売上－店販売上－チケット使用分</li>
+      <li>CSVの金額は税込なので、1.1で割って税抜にして保存します</li>
+    </ul>
+  </div>
+</div>
+
+<script>
+const sb=supabase.createClient(APP_CONFIG.supabaseUrl,APP_CONFIG.supabaseAnon);
+const TAX_RATE=0.10;
+let ME=null;
+let files={sales:null,pay:null};   // 読み込んだCSV：{name, rows:[{列名:値}]}
+let existing={};                    // existing[月] = 今入っている店舗の数字
+let computed=[];                    // 保存する内容
+
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function fmt(n){return n==null?'—':Math.round(n).toLocaleString();}
+function exTax(n){return Math.round(n/(1+TAX_RATE));}
+function canEditStoreSales(){return hasAccess(APP_CONFIG.roles.storeSalesEditor||['代表取締役','管理者'],ME);}
+
+// ===== CSVの読み込み =====
+// 文字コード：UTF-8（BOM付き含む）で読めなければ Shift_JIS で読み直す
+async function readText(file){
+  const buf=await file.arrayBuffer();
+  try{return new TextDecoder('utf-8',{fatal:true}).decode(buf).replace(/^﻿/,'');}
+  catch(e){return new TextDecoder('shift_jis').decode(buf);}
+}
+// CSVを行の配列に（"…" で囲まれた値・値の中のカンマや改行にも対応）
+function parseCSV(text){
+  const rows=[];let row=[],cell='',q=false;
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    if(q){
+      if(c==='"'){if(text[i+1]==='"'){cell+='"';i++;}else q=false;}
+      else cell+=c;
+    }else if(c==='"')q=true;
+    else if(c===','){row.push(cell);cell='';}
+    else if(c==='\n'||c==='\r'){
+      if(c==='\r'&&text[i+1]==='\n')i++;
+      row.push(cell);cell='';
+      if(row.some(function(v){return v.trim()!=='';}))rows.push(row);
+      row=[];
+    }else cell+=c;
+  }
+  row.push(cell);
+  if(row.some(function(v){return v.trim()!=='';}))rows.push(row);
+  if(!rows.length)return [];
+  const head=rows[0].map(function(h){return h.trim();});
+  return rows.slice(1).map(function(r){
+    const o={};head.forEach(function(h,i){o[h]=(r[i]||'').trim();});return o;
+  });
+}
+function num(v){
+  if(v==null||v==='')return 0;
+  const n=Number(String(v).replace(/[,¥円\s]/g,''));
+  return isNaN(n)?0:n;
+}
+// 「2026年09月」「2026/9」「2026-09」→「2026-09」
+function toMonth(v){
+  const m=String(v||'').match(/(\d{4})\D+(\d{1,2})/);
+  return m?m[1]+'-'+String(Number(m[2])).padStart(2,'0'):null;
+}
+// どちらのCSVか見分ける
+function kindOf(rows){
+  if(!rows.length)return null;
+  const cols=Object.keys(rows[0]);
+  const has=function(n){return cols.indexOf(n)!==-1;};
+  if(!has('年月')||!has('純売上'))return null;
+  if(has('商品')&&has('技術'))return 'sales';
+  if(cols.some(function(c){return c.indexOf('チケット')!==-1;})||has('現金'))return 'pay';
+  return null;
+}
+async function onFiles(list){
+  const msgs=[];
+  for(const f of Array.from(list)){
+    try{
+      const rows=parseCSV(await readText(f));
+      const k=kindOf(rows);
+      if(!k){msgs.push({ok:false,name:f.name,kind:'読み取れません'});continue;}
+      files[k]={name:f.name,rows:rows};
+      msgs.push({ok:true,name:f.name,kind:k==='sales'?'売上集計':'支払い方法別'});
+    }catch(e){msgs.push({ok:false,name:f.name,kind:'読み込みエラー'});}
+  }
+  document.getElementById('file-inp').value='';
+  renderFileList(msgs);
+  await renderPreview();
+}
+function renderFileList(extra){
+  let h='';
+  [['sales','売上集計'],['pay','支払い方法別']].forEach(function(p){
+    const f=files[p[0]];
+    h+='<div class="file-item'+(f?' ok':'')+'"><span class="file-kind">'+(f?'✓ ':'○ ')+p[1]+'</span><span class="file-name">'+(f?esc(f.name):'まだ選ばれていません')+'</span></div>';
+  });
+  (extra||[]).filter(function(m){return !m.ok;}).forEach(function(m){
+    h+='<div class="file-item ng"><span class="file-kind">✕ '+esc(m.kind)+'</span><span class="file-name">'+esc(m.name)+'</span></div>';
+  });
+  document.getElementById('file-list').innerHTML=h;
+}
+
+// ===== 計算（ビューティーメリット） =====
+function computeBM(){
+  const out=[];
+  if(!files.sales)return out;
+  const payByMonth={};
+  (files.pay?files.pay.rows:[]).forEach(function(r){const m=toMonth(r['年月']);if(m)payByMonth[m]=r;});
+  files.sales.rows.forEach(function(r){
+    const month=toMonth(r['年月']);if(!month)return;
+    const p=payByMonth[month];
+    const net=num(r['純売上']);
+    const goods=num(r['商品'])+num(r['商品割引']);   // 商品割引はマイナスの値
+    const res={month:month,net:net,goods:goods,hasPay:!!p,warnings:[]};
+    if(p){
+      const ticketCols=Object.keys(p).filter(function(c){return c.indexOf('チケット')!==-1;});
+      res.ticket=ticketCols.reduce(function(t,c){return t+num(p[c]);},0);
+      res.ticketCols=ticketCols.filter(function(c){return num(p[c]);}).map(function(c){return c+' '+num(p[c]).toLocaleString();});
+      res.payNet=num(p['純売上']);
+      if(res.payNet!==net)res.warnings.push('2つのCSVの純売上が一致しません（売上集計 '+net.toLocaleString()+' ／ 支払い方法別 '+res.payNet.toLocaleString()+'）。同じ店舗・同じ月のCSVか確認してください。');
+      res.total=net-res.ticket;
+      res.tech=net-goods-res.ticket;
+    }
+    out.push(res);
+  });
+  return out.sort(function(a,b){return a.month<b.month?-1:1;});
+}
+
+async function loadExisting(store,monthsList){
+  existing={};
+  if(!monthsList.length)return;
+  const {data}=await sb.from('store_sales').select('*').eq('store',store).in('month',monthsList);
+  (data||[]).forEach(function(r){existing[r.month]=r;});
+}
+
+async function renderPreview(){
+  const card=document.getElementById('preview-card');
+  const box=document.getElementById('preview');
+  const btn=document.getElementById('save-btn');
+  computed=[];btn.disabled=true;
+  if(!files.sales&&!files.pay){card.style.display='none';return;}
+  card.style.display='';
+  if(!files.sales){box.innerHTML='<div class="msg warn">「売上集計」のCSVも選んでください。</div>';return;}
+  if(!files.pay){box.innerHTML='<div class="msg warn">「支払い方法別」のCSVも選んでください。チケット使用分を引くために必要です。</div>';return;}
+  const store=document.getElementById('store-sel').value;
+  const list=computeBM();
+  if(!list.length){box.innerHTML='<div class="msg err">CSVから月が読み取れませんでした。</div>';return;}
+  await loadExisting(store,list.map(function(x){return x.month;}));
+  let h='<div class="msg ok">店舗：<b>'+esc(storeLabel(store))+'</b>　として保存します</div>';
+  let canSave=false;
+  list.forEach(function(x){
+    const p=x.month.split('-');
+    h+='<div class="month-block"><div class="month-head"><b>'+p[0]+'年'+Number(p[1])+'月</b>';
+    if(!x.hasPay){h+='<span class="chk ng">支払い方法別のCSVにこの月がありません</span></div></div>';return;}
+    h+=x.warnings.length?'<span class="chk ng">⚠ 要確認</span>':'<span class="chk">✓ 2つのCSVの純売上が一致</span>';
+    h+='</div>';
+    x.warnings.forEach(function(w){h+='<div class="msg err">'+esc(w)+'</div>';});
+    const cur=existing[x.month]||{};
+    h+='<table><thead><tr><th>項目</th><th>CSV（税込）</th><th>保存する値（税抜）</th><th>今の値</th></tr></thead><tbody>';
+    [['総売上',x.total,'total_sales'],['技術売上',x.tech,'tech_sales'],['店販売上',x.goods,'tanden']].forEach(function(r){
+      h+='<tr class="key"><td>'+r[0]+'</td><td>'+fmt(r[1])+'</td><td class="save">'+fmt(exTax(r[1]))+'</td><td class="cur">'+fmt(cur[r[2]])+'</td></tr>';
+    });
+    h+='</tbody></table>';
+    h+='<div class="detail">純売上 '+fmt(x.net)+' － チケット使用分 '+fmt(x.ticket)+' ＝ 総売上 '+fmt(x.total)+'（税込）';
+    if(x.ticketCols.length)h+='<br>チケット内訳：'+esc(x.ticketCols.join('、'));
+    if(cur.includes_eye)h+='<br><span style="color:var(--red)">今の値は「アイ込み」の数字です。保存するとヘアだけの数字に置き換わり、アイ込みの印も外れます。</span>';
+    h+='</div></div>';
+    if(!x.warnings.length){
+      computed.push({month:x.month,store:store,total_sales:exTax(x.total),tech_sales:exTax(x.tech),tanden:exTax(x.goods)});
+      canSave=true;
+    }
+  });
+  if(list.some(function(x){return x.warnings.length;}))h+='<div class="msg warn">「要確認」の月は保存しません。</div>';
+  box.innerHTML=h;
+  btn.disabled=!canSave;
+}
+
+async function saveAll(){
+  if(!computed.length)return;
+  const store=computed[0].store;
+  const months=computed.map(function(c){return c.month;});
+  if(!confirm(storeLabel(store)+' の '+months.join('、')+' の総売上・技術売上・店販売上を保存します。よろしいですか？'))return;
+  const rows=computed.map(function(c){
+    return Object.assign({},c,{includes_eye:false,source:'csv',updated_at:new Date().toISOString()});
+  });
+  const btn=document.getElementById('save-btn');btn.disabled=true;
+  const {error}=await sb.from('store_sales').upsert(rows,{onConflict:'month,store'});
+  if(error){alert('保存に失敗しました: '+error.message);btn.disabled=false;return;}
+  alert('保存しました');
+  await renderPreview();
+}
+
+function onSystemChange(){renderPreview();}
+
+(async function(){
+  ME=await initAppHeader(sb,'sales');
+  if(!ME)return;
+  document.title='CSV取り込み | '+APP_CONFIG.companyName;
+  if(!canEditStoreSales()){
+    document.querySelector('.main').innerHTML='<div class="card"><div class="card-title">この画面は使えません</div><div class="card-sub">CSV取り込みは、店舗の数字を入力できる人だけが使えます。</div><button class="btn btn-ghost" onclick="location.href=\'sales.html\'">数値管理に戻る</button></div>';
+    return;
+  }
+  // 店舗のプルダウン（グループ別）
+  let h='';
+  APP_CONFIG.storeGroups.forEach(function(g){
+    const list=APP_CONFIG.stores.filter(function(s){return s.group===g.id;});
+    if(!list.length)return;
+    h+='<optgroup label="'+esc(g.label)+'">'+list.map(function(s){return '<option value="'+esc(s.id)+'">'+esc(s.label)+'</option>';}).join('')+'</optgroup>';
+  });
+  document.getElementById('store-sel').innerHTML=h;
+  renderFileList();
+})();
+</script>
+</body>
+</html>
