@@ -175,7 +175,7 @@ tr.sum-row td:first-child{background:#f5f0eb;}
 <div class="modal-overlay" id="productivity-modal">
   <div class="modal">
     <div class="modal-title">📊 役職別基準値設定</div>
-    <div class="modal-sub">役職ごとの月間売上目標（税込）</div>
+    <div class="modal-sub">役職ごとの月間売上目標（税抜）</div>
     <div id="productivity-fields"></div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal('productivity-modal')">キャンセル</button>
@@ -475,7 +475,7 @@ function tandenRatio(d){if(d.tanden==null)return null;const r=calcResult(d);retu
 function targetOf(s){return Number(roleProductivity[s.position]||0);}
 
 // ===== スタッフの数字の集計 =====
-// 複数人の数字を合算する。率（再来率）は入力のある人の平均、客単価は技術売上÷総入客数（税込）
+// 複数人の数字を合算する。率（再来率）は入力のある人の平均、客単価は技術売上÷総入客数（税抜）
 function aggregate(list){
   const a={meimei_sales:0,meimei_clients:0,free_clients:0,free_sales:0,tanden:0,milbon_id:0,ticket_count:0,late:0,_target:0,_rn:[],_rr:[]};
   list.forEach(function(s){
@@ -490,7 +490,7 @@ function aggregate(list){
   return a;
 }
 function avg1(v){return v.length?Math.round(v.reduce(function(x,y){return x+y;},0)/v.length*10)/10:null;}
-function unitPriceOf(d){const c=Number(d.meimei_clients||0)+Number(d.free_clients||0);return c?inTax(techOf(d)/c):null;}
+function unitPriceOf(d){const c=Number(d.meimei_clients||0)+Number(d.free_clients||0);return c?Math.round(techOf(d)/c):null;}
 function membersOfStore(storeId){
   return students.filter(function(s){return getStoreForMonth(s,currentMonth)===storeId;});
 }
@@ -625,13 +625,13 @@ function numOpts(max,val){
 function moneyCell(v,id){
   const idAttr=id?' id="'+id+'"':'';
   const idSub=id?' id="'+id+'-sub"':'';
-  return '<td><span class="auto-val"'+idAttr+'>'+(v?inTax(v).toLocaleString():'—')+'</span><span class="auto-val-sub"'+idSub+'>'+(v?'(税抜 '+Math.round(v).toLocaleString()+')':'')+'</span></td>';
+  return '<td><span class="auto-val"'+idAttr+'>'+(v?Math.round(v).toLocaleString():'—')+'</span><span class="auto-val-sub"'+idSub+'></span></td>';
 }
 function ratioText(d){const r=tandenRatio(d);return r==null?'—':r.toFixed(1)+'%';}
 // 自動計算の列（総売目標・総売結果・技術売上・店販比率）
 function autoCells(d,target,sid){
   return {
-    target:'<td><span class="auto-val">'+(target?target.toLocaleString():'—')+'</span><span class="auto-val-sub">'+(target?exTax(target):'')+'</span></td>',
+    target:'<td><span class="auto-val">'+(target?Math.round(target).toLocaleString():'—')+'</span></td>',
     result:moneyCell(calcResult(d),sid?'result-'+sid:null),
     tech:moneyCell(techOf(d),sid?'tech-'+sid:null),
     tanden_ratio:'<td><span class="auto-val"'+(sid?' id="tratio-'+sid+'"':'')+'>'+ratioText(d)+'</span></td>',
@@ -679,8 +679,7 @@ function refreshRowAuto(sid){
   const d=salesData[sid]||{};
   [['result',calcResult(d)],['tech',techOf(d)]].forEach(function(p){
     const v=p[1];
-    document.getElementById(p[0]+'-'+sid).textContent=v?inTax(v).toLocaleString():'—';
-    document.getElementById(p[0]+'-'+sid+'-sub').textContent=v?'(税抜 '+Math.round(v).toLocaleString()+')':'';
+    document.getElementById(p[0]+'-'+sid).textContent=v?Math.round(v).toLocaleString():'—';
   });
   const tr=document.getElementById('tratio-'+sid);if(tr)tr.textContent=ratioText(d);
 }
@@ -780,7 +779,7 @@ function updateTotals(){
   const multi=!isSingleStore(currentStore);
   function money(id,v){
     document.getElementById(id).textContent=v?yen(v):'—';
-    const sub=document.getElementById(id+'-sub');if(sub)sub.textContent=v?'(税込 '+yen(v*(1+TAX_RATE))+')':'';
+    const sub=document.getElementById(id+'-sub');if(sub)sub.textContent='';
   }
   money('tot-result',a.total_sales);
   money('tot-tech',a.tech_sales);
@@ -819,7 +818,7 @@ function showProductivityModal(){
   if(!canEditSettings())return;
   const positions=APP_CONFIG.positions.filter(function(p){return !EXCLUDE_ROLES.includes(p);});
   document.getElementById('productivity-fields').innerHTML=positions.map(function(pos){
-    return '<div class="field"><label>'+esc(pos)+'（税込・円）</label><input type="number" class="prod-input" data-pos="'+esc(pos)+'" value="'+esc(roleProductivity[pos]||'')+'" placeholder="0"></div>';
+    return '<div class="field"><label>'+esc(pos)+'（税抜・円）</label><input type="number" class="prod-input" data-pos="'+esc(pos)+'" value="'+esc(roleProductivity[pos]||'')+'" placeholder="0"></div>';
   }).join('');
   document.getElementById('productivity-modal').classList.add('show');
 }
