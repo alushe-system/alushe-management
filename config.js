@@ -95,81 +95,23 @@ const APP_CONFIG = {
   developerPositions: ['管理者'],
   developerNames: ['森亮輔', '森亮介'],
 
-  // 報告の種類（会議報告 →「店舗報告」タブで選んで入力する）
-  //   id = DBの report_type に保存される値（変更しないこと）/ name = 表示名
-  //   note = 入力ルールの説明 / sections = 入力するタイミングごとの見出しと項目
-  //   項目の col は pdca_reports の保存先の列（plan, do_text, deadline_text, check_text, action, other_report, other_authority の7つから選ぶ）
-  reportTypes: [
-    { id: 'monthly', icon: '📋', name: '月末報告',
-      note: '目標・行動・期限は店長会議後3日以内に記入／反省・改善は月末〜月初に記入',
-      sections: [
-        { title: '店長会議後3日以内に記入', items: [
-          { col: 'plan',          label: '目標',         ph: '今月の目標（数字で）' },
-          { col: 'do_text',       label: '行動',         ph: '目標のために何をするか' },
-          { col: 'deadline_text', label: '期限（ToDo）', ph: '誰が・何を・いつまでに行うか' },
-        ]},
-        { title: '月末〜月初に記入', items: [
-          { col: 'check_text', label: '反省', ph: '目標に対して結果はどうだったか・できなかった理由' },
-          { col: 'action',     label: '改善', ph: '来月どう変えるか' },
-        ]},
-        { title: 'その他', items: [
-          { col: 'other_report',    label: 'その他報告',     ph: '' },
-          { col: 'other_authority', label: 'その他権限要求', ph: '' },
-        ]},
-      ]},
-    { id: 'midmonth', icon: '⏱', name: '月中報告',
-      note: '毎月15日〜20日に記入（月末報告の目標に対する途中経過）',
-      sections: [
-        { title: '15日時点の状況', items: [
-          { col: 'plan',       label: '目標に対する進捗', ph: '売上・客数などの現時点の数字と達成率' },
-          { col: 'check_text', label: 'うまくいっていること／課題', ph: '' },
-        ]},
-        { title: '後半の打ち手', items: [
-          { col: 'do_text',       label: '後半の行動',   ph: '月末までに何をするか' },
-          { col: 'deadline_text', label: '期限（ToDo）', ph: '誰が・何を・いつまでに行うか' },
-          { col: 'other_report',  label: '本部への相談・要望', ph: '' },
-        ]},
-      ]},
-    { id: 'training', icon: '🌱', name: '育成報告',
-      note: '月末〜月初に記入（アシスタント・新人スタッフの育成状況）',
-      sections: [
-        { title: '育成の状況', items: [
-          { col: 'plan',       label: '対象スタッフと今月の育成目標', ph: '例：〇〇さん　カラー合格' },
-          { col: 'do_text',    label: '実施した練習・指導',     ph: '練習の回数・内容・担当' },
-          { col: 'check_text', label: '到達度・結果',           ph: 'どこまでできたか・合否' },
-        ]},
-        { title: '来月に向けて', items: [
-          { col: 'action',        label: '来月の課題',   ph: '' },
-          { col: 'deadline_text', label: '期限（ToDo）', ph: '誰が・何を・いつまでに行うか' },
-        ]},
-      ]},
-    { id: 'marketing', icon: '📣', name: '集客・SNS報告',
-      note: '月末〜月初に記入（ホットペッパー・Instagram などの施策と結果）',
-      sections: [
-        { title: '今月の施策と結果', items: [
-          { col: 'plan',       label: '実施した施策',   ph: 'クーポン変更・投稿・ブログ・口コミ対策 など' },
-          { col: 'check_text', label: '数字の結果',     ph: '新規数・予約数・フォロワー数・口コミ数 など' },
-          { col: 'do_text',    label: '良かった点',     ph: '' },
-        ]},
-        { title: '来月に向けて', items: [
-          { col: 'action',        label: '改善・次の施策', ph: '' },
-          { col: 'deadline_text', label: '期限（ToDo）',   ph: '誰が・何を・いつまでに行うか' },
-        ]},
-      ]},
-    { id: 'event', icon: '🎉', name: 'イベント・キャンペーン報告',
-      note: 'イベント・キャンペーン終了後1週間以内に記入（月ごと・店舗ごとに1件）',
-      sections: [
-        { title: '企画', items: [
-          { col: 'plan',    label: '企画名・目的・目標', ph: '例：年末ヘアケアキャンペーン　店販20万円' },
-          { col: 'do_text', label: '実施内容・期間',     ph: '' },
-        ]},
-        { title: '結果と振り返り', items: [
-          { col: 'check_text',    label: '結果（数字）',     ph: '' },
-          { col: 'action',        label: '反省・次回への改善', ph: '' },
-          { col: 'deadline_text', label: '期限（ToDo）',     ph: '誰が・何を・いつまでに行うか' },
-        ]},
-      ]},
+  // ===== 会議報告 =====
+  // 面談報告：面談の種類（育成面談もここで記録する）
+  interviewTypes: ['定期面談', '育成面談（練習・カリキュラム）', '目標設定', '振り返り', '悩み・相談', 'その他'],
+
+  // その他報告：報告の種類（この中にないものは「その他（自分で入力）」で自由に書ける）
+  //   name = 種類の名前 / ph = 内容欄に薄く出す書き方のヒント
+  otherReportCategories: [
+    { name: '集客・SNS',             ph: '実施したこと（クーポン・投稿・ブログなど）／数字の結果（新規数・予約数・フォロワー数など）／次にやること' },
+    { name: 'イベント・キャンペーン', ph: '企画名・期間／目標と結果／次回への改善' },
+    { name: 'お客様の声・クレーム',   ph: 'いつ・どんな内容か／対応したこと／今後の対策' },
+    { name: '研修・セミナー',         ph: '受講したもの／学んだこと／お店でどう活かすか' },
+    { name: '設備・備品',             ph: '何が・どうなったか／対応状況／必要な費用' },
   ],
+
+  // 面談報告・その他報告の公開範囲の初期値
+  //   rep=代表のみ / manager=マネージャー以上 / storeMgr=店長以上 / subStore=副店長以上 / store=同じ店舗の人だけ / people=名前を指定
+  defaultVisibility: 'storeMgr',
 
   // メニュー（ホーム画面のカードと上部タブはこの順番で表示）
   // access: 'all' = ログインした全員 / それ以外は roles のキー名
