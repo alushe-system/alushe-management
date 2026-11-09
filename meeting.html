@@ -125,7 +125,7 @@ input[type=date].inp{display:block;max-width:100%;min-height:42px;-webkit-appear
       </div>
     </div>
     <div class="card">
-      <div class="card-title">議題項目 ／ 決定事項（入力欄から離れると自動保存）</div>
+      <div class="card-title">議題項目 ／ 決定事項</div>
       <div id="ex-items"></div>
       <button class="btn btn-outline btn-sm" onclick="addExecItem()">＋ 議題を追加</button>
     </div>
@@ -134,7 +134,8 @@ input[type=date].inp{display:block;max-width:100%;min-height:42px;-webkit-appear
       <div id="ex-attach-list"></div>
       <input type="file" class="inp" id="ex-attach-new" multiple>
     </div>
-    <div class="save-row"><button class="btn btn-dark" onclick="saveExec()">保存</button></div>
+    <div class="iv-meta" id="ex-updated" style="text-align:right;margin-bottom:6px"></div>
+    <div class="save-row"><button class="btn btn-dark" onclick="saveExec()">保存する</button></div>
   </div>
 
   <!-- ===== その他報告（種類を選ぶ or 自由に入力） ===== -->
@@ -916,15 +917,20 @@ function renderExItems(){
   document.getElementById('ex-items').innerHTML=exItems.map(function(it,i){
     return '<div class="item-block"><div class="item-num">議題 '+(i+1)+'</div>'
       +'<button class="item-del" onclick="removeExecItem('+i+')">×</button>'
-      +'<div class="field"><label>議題項目</label><textarea class="txt" data-i="'+i+'" data-f="agenda" onchange="updExItem(this)">'+esc(it.agenda)+'</textarea></div>'
-      +'<div class="field"><label>決定事項</label><textarea class="txt" data-i="'+i+'" data-f="decision" onchange="updExItem(this)">'+esc(it.decision)+'</textarea></div>'
+      +'<div class="field"><label>議題項目</label><textarea class="txt" data-i="'+i+'" data-f="agenda" oninput="updExItem(this)" placeholder="例：安藤　集客について">'+esc(it.agenda)+'</textarea></div>'
+      +'<div class="field"><label>決定事項</label><textarea class="txt" data-i="'+i+'" data-f="decision" oninput="updExItem(this)" placeholder="会議で決まったこと（誰が・何を・いつまでに）">'+esc(it.decision)+'</textarea></div>'
       +'</div>';
   }).join('');
   autoGrowAll(document.getElementById('ex-items'));
 }
-function updExItem(el){exItems[el.dataset.i][el.dataset.f]=el.value;saveExec(true);}
+// 入力内容は画面上に持っておき、「保存する」を押したときに保存する（他のタブと同じ）
+function updExItem(el){exItems[el.dataset.i][el.dataset.f]=el.value;}
 function addExecItem(){exItems.push({agenda:'',decision:''});renderExItems();}
-function removeExecItem(i){exItems.splice(i,1);renderExItems();saveExec(true);}
+function removeExecItem(i){
+  const it=exItems[i];
+  if((it.agenda||it.decision)&&!confirm('議題 '+(i+1)+' を削除しますか？（「保存する」を押すと確定します）'))return;
+  exItems.splice(i,1);renderExItems();setDirty(true);
+}
 async function loadExec(){
   const monthSel=document.getElementById('ex-month');
   if(!monthSel.options.length)monthOptions(monthSel,null);
@@ -933,20 +939,20 @@ async function loadExec(){
   renderExItems();
   window.__exRow=data||null;
   document.getElementById('ex-attach-list').innerHTML=attachListHtml(data&&data.attachments,function(i){return 'delExAttachment('+i+')';});
+  document.getElementById('ex-updated').textContent=(data&&data.updated_at)?'最終保存：'+fmtDateTime(data.updated_at):'';
   setDirty(false);
 }
-async function saveExec(silent){
+async function saveExec(){
   const month=document.getElementById('ex-month').value;
   const fileInput=document.getElementById('ex-attach-new');
-  const added=(!silent&&fileInput.files.length)?await uploadAttachments(fileInput.files):[];
+  const added=fileInput.files.length?await uploadAttachments(fileInput.files):[];
   const existing=(window.__exRow&&window.__exRow.attachments)||[];
-  const {data,error}=await sb.from('executive_meetings').upsert({month,agenda_items:exItems,attachments:existing.concat(added),updated_at:new Date().toISOString()},{onConflict:'month'}).select().maybeSingle();
-  if(error){if(!silent)alert('エラー: '+error.message);return;}
-  if(data)window.__exRow=data;
-  if(silent){if(!fileInput.files.length)setDirty(false);return;}
+  const {error}=await sb.from('executive_meetings').upsert({month,agenda_items:exItems,attachments:existing.concat(added),updated_at:new Date().toISOString()},{onConflict:'month'});
+  if(error){alert('エラー: '+error.message);return;}
   fileInput.value='';
   setDirty(false);
-  alert('保存しました');loadExec();
+  alert(monthLabel(month)+'の幹部会議を保存しました');
+  loadExec();
 }
 async function delExAttachment(idx){
   const r=window.__exRow;if(!r)return;
