@@ -462,13 +462,12 @@ function getStoreForMonth(s,month){
 function getStaffList(){
   let list=students.slice();
   if(currentStore!=='all')list=list.filter(function(s){return storeFilterMatches(currentStore,getStoreForMonth(s,currentMonth));});
-  // 複数店舗を並べるときは「店舗順 → 役職順」、店舗1つのときは役職順
-  const byStore=isAggregate();
+  // 「役職順」：全店舗を表示しているときも店舗で分けず、全員を役職順に並べる
+  //   （マネージャー → 店長 → 店長 … → 副店長 …）。同じ役職の中は店舗順 → 名前順
   return list.sort(function(a,b){
-    const so=storeOrder(getStoreForMonth(a,currentMonth))-storeOrder(getStoreForMonth(b,currentMonth));
-    if(byStore&&so!==0)return so;
     const po=positionOrder(a.position)-positionOrder(b.position);if(po!==0)return po;
-    return so;
+    const so=storeOrder(getStoreForMonth(a,currentMonth))-storeOrder(getStoreForMonth(b,currentMonth));if(so!==0)return so;
+    return String(a.name).localeCompare(String(b.name),'ja');
   });
 }
 function techOf(d){return Number(d.meimei_sales||0)+Number(d.free_sales||0);}
