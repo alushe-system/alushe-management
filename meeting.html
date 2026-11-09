@@ -55,15 +55,17 @@ body{background:var(--cream);font-family:'Noto Sans JP',sans-serif;color:var(--d
 .prev-compact .pf-body.empty{color:var(--soft);}
 .save-row{display:flex;justify-content:flex-end;gap:8px;margin-top:6px;}
 .empty-msg{text-align:center;color:var(--soft);font-size:13px;padding:24px;}
-.rt-row{display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;margin-bottom:8px;padding-bottom:2px;}
-.rt-row::-webkit-scrollbar{display:none;}
-.rt-btn{flex-shrink:0;font-family:'Noto Sans JP',sans-serif;font-size:12.5px;font-weight:600;padding:7px 14px;border-radius:18px;border:1.5px solid var(--gold-light);background:white;color:var(--mid);cursor:pointer;white-space:nowrap;}
-.rt-btn.active{background:var(--dark);border-color:var(--dark);color:white;}
-.rt-note{font-size:11.5px;color:var(--accent);background:#fdf6ec;border:1px solid var(--gold-light);border-radius:8px;padding:8px 12px;margin-bottom:12px;line-height:1.6;}
-.rt-note:empty{display:none;}
 .sec-title{font-size:11px;font-weight:700;color:var(--gold);letter-spacing:1px;margin:14px 0 6px;}
 .att-row{display:flex;align-items:center;gap:8px;margin-bottom:4px;}
 .att-row a,.att-link{color:var(--blue);text-decoration:underline;margin-right:10px;}
+.rule-note{font-size:11.5px;color:var(--accent);background:#fdf6ec;border:1px solid var(--gold-light);border-radius:8px;padding:8px 12px;margin-bottom:12px;line-height:1.6;}
+.vis-badge{display:inline-block;font-size:10.5px;padding:2px 8px;border-radius:10px;background:#f3ece2;color:var(--accent);font-weight:600;margin-left:4px;}
+.type-badge{display:inline-block;font-size:10.5px;padding:2px 8px;border-radius:10px;background:var(--dark);color:white;font-weight:600;margin-right:6px;}
+.people-box{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:6px;border:1.5px solid var(--gold-light);border-radius:8px;padding:10px;background:#fdfaf6;margin-top:8px;max-height:260px;overflow-y:auto;}
+.people-box label{display:flex;align-items:center;gap:6px;font-size:13px;}
+.people-box .pg{grid-column:1/-1;font-size:11px;font-weight:700;color:var(--gold);margin-top:4px;}
+.dirty-bar{display:none;position:fixed;left:0;right:0;bottom:0;background:#c0392b;color:white;font-size:12.5px;font-weight:600;text-align:center;padding:9px 12px;z-index:50;}
+.dirty-bar.show{display:block;}
 </style>
 </head>
 <body>
@@ -71,97 +73,59 @@ body{background:var(--cream);font-family:'Noto Sans JP',sans-serif;color:var(--d
 <div id="app-header"></div>
 
 <div class="wrap" id="app-wrap" style="display:none">
-  <!-- 3段目：会議報告の項目（内容は要件定義後に見直し予定） -->
+  <!-- 3段目：会議報告の項目 -->
   <div class="tabs">
-    <button class="tab-btn active" data-tab="monthly" onclick="switchTab('monthly')">📋 店舗報告</button>
-    <button class="tab-btn" data-tab="store" onclick="switchTab('store')">🏪 店舗ミーティング</button>
+    <button class="tab-btn active" data-tab="monthly" onclick="switchTab('monthly')">📋 月末報告</button>
     <button class="tab-btn" data-tab="interview" onclick="switchTab('interview')">💬 面談報告</button>
-    <button class="tab-btn" data-tab="repnote" onclick="switchTab('repnote')" id="tab-btn-repnote" style="display:none">🔒 代表管理</button>
     <button class="tab-btn" data-tab="exec" onclick="switchTab('exec')">🏛 幹部会議</button>
+    <button class="tab-btn" data-tab="other" onclick="switchTab('other')">📄 その他報告</button>
+    <button class="tab-btn" data-tab="repnote" onclick="switchTab('repnote')" id="tab-btn-repnote" style="display:none">🔒 代表専用メモ</button>
   </div>
 
-  <!-- 店舗報告（月末報告ほか、種類を選んで入力） -->
+  <!-- ===== 月末報告 ===== -->
   <div class="panel active" id="panel-monthly">
-    <div class="rt-row" id="mo-types"></div>
-    <div class="rt-note" id="mo-note"></div>
+    <div class="rule-note">目標・行動・期限（ToDo）は<b>店長会議後3日以内</b>に記入／反省・改善は<b>月末〜月初</b>に記入</div>
     <div class="filter-row">
-      <select class="sel store-sel" id="mo-store" onchange="loadMonthly()"></select>
+      <select class="sel store-sel" id="mo-store" data-nodirty onchange="filterGo(this,loadMonthly)"></select>
       <div class="month-nav">
         <button class="month-nav-btn" onclick="shiftMonth('mo-month',-1,loadMonthly)">◀</button>
-        <select class="sel" id="mo-month" onchange="loadMonthly()"></select>
+        <select class="sel" id="mo-month" data-nodirty onchange="filterGo(this,loadMonthly)"></select>
         <button class="month-nav-btn" onclick="shiftMonth('mo-month',1,loadMonthly)">▶</button>
       </div>
     </div>
     <div id="mo-blocks"></div>
   </div>
 
-  <!-- 店舗ミーティング -->
-  <div class="panel" id="panel-store">
-    <div class="filter-row">
-      <select class="sel store-sel" id="sm-store" onchange="loadStoreMeeting()"></select>
-      <div class="month-nav">
-        <button class="month-nav-btn" onclick="shiftMonth('sm-month',-1,loadStoreMeeting)">◀</button>
-        <select class="sel" id="sm-month" onchange="loadStoreMeeting()"></select>
-        <button class="month-nav-btn" onclick="shiftMonth('sm-month',1,loadStoreMeeting)">▶</button>
-      </div>
-    </div>
-    <div id="sm-blocks"></div>
-  </div>
-
-  <!-- 面談報告 -->
+  <!-- ===== 面談報告（育成面談もここに記録） ===== -->
   <div class="panel" id="panel-interview">
     <div class="filter-row">
-      <select class="sel store-sel" id="iv-store" onchange="onIvStoreChange()"></select>
-      <select class="sel" id="iv-name-filter" onchange="renderInterviewList()"><option value="">全員</option></select>
+      <select class="sel store-sel" id="iv-store" data-nodirty onchange="filterGo(this,onIvStoreChange)"></select>
+      <select class="sel" id="iv-name-filter" data-nodirty onchange="filterGo(this,renderInterviewList)"><option value="">全員</option></select>
       <div class="month-nav">
-        <button class="month-nav-btn" onclick="shiftMonth('iv-month',-1,onIvMonthNav)">◀</button>
-        <select class="sel" id="iv-month" onchange="onIvMonthNav()"></select>
-        <button class="month-nav-btn" onclick="shiftMonth('iv-month',1,onIvMonthNav)">▶</button>
+        <button class="month-nav-btn" onclick="shiftMonth('iv-month',-1,renderInterviewList)">◀</button>
+        <select class="sel" id="iv-month" data-nodirty onchange="filterGo(this,renderInterviewList)"></select>
+        <button class="month-nav-btn" onclick="shiftMonth('iv-month',1,renderInterviewList)">▶</button>
       </div>
     </div>
     <div class="card">
       <div class="card-title">面談記録を追加</div>
-      <div class="field"><label>対象スタッフ</label><select class="sel" id="iv-student" style="width:100%"></select></div>
-      <div class="field"><label>面談担当者</label><select class="sel" id="iv-interviewer" style="width:100%"></select></div>
-      <div class="field"><label>面談日</label><input class="inp" type="date" id="iv-date"></div>
-      <div class="field"><label>面談内容</label><textarea class="txt" id="iv-content"></textarea></div>
-      <div class="field"><label>今後のアクション</label><textarea class="txt" id="iv-next"></textarea></div>
-      <div class="field"><label>特記事項</label><textarea class="txt" id="iv-notes"></textarea></div>
-      <div class="field"><label>添付ファイル</label><input type="file" class="inp" id="iv-attach" multiple></div>
-      <div class="save-row"><button class="btn btn-dark" id="iv-add-btn" onclick="addInterview()">追加する</button></div>
+      <div id="iv-form"></div>
+      <div class="save-row"><button class="btn btn-dark" id="iv-add-btn" onclick="addInterview()">保存する</button></div>
     </div>
     <div id="iv-list"></div>
   </div>
 
-  <!-- 代表管理 -->
-  <div class="panel" id="panel-repnote">
-    <div class="filter-row">
-      <select class="sel" id="rn-student" onchange="renderRepNotes()" style="min-width:180px"></select>
-      <input class="inp" id="rn-search" placeholder="内容・記録者で検索" oninput="renderRepNotes()" style="max-width:220px">
-    </div>
-    <div class="card">
-      <div class="card-title">記録を追加</div>
-      <div class="field"><label>日付</label><input class="inp" type="date" id="rn-date"></div>
-      <div class="field"><label>種別</label><select class="sel" id="rn-category" style="width:100%"></select></div>
-      <div class="field"><label>内容</label><textarea class="txt" id="rn-content"></textarea></div>
-      <div class="field"><label>添付ファイル</label><input type="file" class="inp" id="rn-attach" multiple></div>
-      <div class="save-row"><button class="btn btn-dark" id="rn-add-btn" onclick="addRepNote()">追加する</button></div>
-    </div>
-    <div class="card-title" style="margin:14px 4px 8px">記録一覧（新しい順）</div>
-    <div id="rn-list"></div>
-  </div>
-
-  <!-- 幹部会議 -->
+  <!-- ===== 幹部会議 ===== -->
   <div class="panel" id="panel-exec">
     <div class="filter-row">
       <div class="month-nav">
         <button class="month-nav-btn" onclick="shiftMonth('ex-month',-1,loadExec)">◀</button>
-        <select class="sel" id="ex-month" onchange="loadExec()"></select>
+        <select class="sel" id="ex-month" data-nodirty onchange="filterGo(this,loadExec)"></select>
         <button class="month-nav-btn" onclick="shiftMonth('ex-month',1,loadExec)">▶</button>
       </div>
     </div>
     <div class="card">
-      <div class="card-title">議題項目 ／ 決定事項</div>
+      <div class="card-title">議題項目 ／ 決定事項（入力欄から離れると自動保存）</div>
       <div id="ex-items"></div>
       <button class="btn btn-outline btn-sm" onclick="addExecItem()">＋ 議題を追加</button>
     </div>
@@ -172,7 +136,46 @@ body{background:var(--cream);font-family:'Noto Sans JP',sans-serif;color:var(--d
     </div>
     <div class="save-row"><button class="btn btn-dark" onclick="saveExec()">保存</button></div>
   </div>
+
+  <!-- ===== その他報告（種類を選ぶ or 自由に入力） ===== -->
+  <div class="panel" id="panel-other">
+    <div class="filter-row">
+      <select class="sel store-sel" id="or-store" data-nodirty onchange="filterGo(this,loadOther)"></select>
+      <select class="sel" id="or-cat-filter" data-nodirty onchange="filterGo(this,loadOther)"></select>
+      <div class="month-nav">
+        <button class="month-nav-btn" onclick="shiftMonth('or-month',-1,loadOther)">◀</button>
+        <select class="sel" id="or-month" data-nodirty onchange="filterGo(this,loadOther)"></select>
+        <button class="month-nav-btn" onclick="shiftMonth('or-month',1,loadOther)">▶</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">その他の報告を追加</div>
+      <div id="or-form"></div>
+      <div class="save-row"><button class="btn btn-dark" id="or-add-btn" onclick="addOther()">保存する</button></div>
+    </div>
+    <div id="or-list"></div>
+  </div>
+
+  <!-- ===== 代表専用メモ ===== -->
+  <div class="panel" id="panel-repnote">
+    <div class="rule-note">代表専用のメモです。代表と管理者だけが見られます（店長・マネージャーには表示されません）。</div>
+    <div class="filter-row">
+      <select class="sel" id="rn-student" data-nodirty onchange="filterGo(this,renderRepNotes)" style="min-width:180px"></select>
+      <input class="inp" id="rn-search" data-nodirty placeholder="内容・記録者で検索" oninput="renderRepNotes()" style="max-width:220px">
+    </div>
+    <div class="card">
+      <div class="card-title">メモを追加</div>
+      <div class="field"><label>日付</label><input class="inp" type="date" id="rn-date"></div>
+      <div class="field"><label>種別</label><select class="sel" id="rn-category" style="width:100%"></select></div>
+      <div class="field"><label>内容</label><textarea class="txt" id="rn-content"></textarea></div>
+      <div class="field"><label>添付ファイル</label><input type="file" class="inp" id="rn-attach" multiple></div>
+      <div class="save-row"><button class="btn btn-dark" id="rn-add-btn" onclick="addRepNote()">保存する</button></div>
+    </div>
+    <div class="card-title" style="margin:14px 4px 8px">メモ一覧（新しい順）</div>
+    <div id="rn-list"></div>
+  </div>
 </div>
+<div class="dirty-bar" id="dirty-bar">⚠ 保存していない入力があります（「保存」を押してください）</div>
 
 <script>
 const sb=supabase.createClient(APP_CONFIG.supabaseUrl,APP_CONFIG.supabaseAnon);
@@ -180,22 +183,60 @@ const ALL=APP_CONFIG.allStoresValue;
 const STORE_IDS=APP_CONFIG.stores.map(function(s){return s.id;});
 // config.js に設定がなければ標準値を使う
 const REP_NOTE_ROLES=APP_CONFIG.roles.repNote||['代表取締役','管理者'];
-const INTERVIEWER_ROLES=APP_CONFIG.roles.interviewer||['代表取締役','FCオーナー','マネージャー','店長','副店長'];
-const NOT_TARGET=['管理者','代表取締役'];   // 面談・代表管理の対象に出さない役職
+const INTERVIEWER_ROLES=APP_CONFIG.roles.interviewer||['代表取締役','FCオーナー','マネージャー','サブマネージャー','店長','副店長'];
+const NOT_TARGET=['管理者','代表取締役'];   // 面談・代表専用メモの対象に出さない役職
 const RN_CATEGORIES=['面談','雑談','LINE','電話','その他'];
+const IV_TYPES=APP_CONFIG.interviewTypes||['定期面談','育成面談（練習・カリキュラム）','目標設定','振り返り','悩み・相談','その他'];
+const OR_CATEGORIES=APP_CONFIG.otherReportCategories||[{name:'その他',ph:''}];
+const OR_FREE='__free__';   // 種類を自由に入力するときの値
+const DEFAULT_VIS=APP_CONFIG.defaultVisibility||'storeMgr';
 
 let students=[],ME=null;
 
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function jsq(s){return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'");}
 function activeStudents(){return students.filter(function(s){return s.is_active!==false;});}
+function studentById(id){return students.find(function(s){return s.id===id;})||null;}
 function byOrder(a,b){
   const so=storeOrder(a.store)-storeOrder(b.store);if(so!==0)return so;
   return positionOrder(a.position)-positionOrder(b.position);
 }
+function today(){const t=new Date();return t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');}
+function fmtDateTime(iso){
+  if(!iso)return '';
+  const d=new Date(iso);
+  return (d.getMonth()+1)+'/'+d.getDate()+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+}
 // 店舗セレクトで「全店舗」を選んだら全店、それ以外はその店舗だけ
 function targetStores(v){return v==='all'?STORE_IDS:[v];}
+function nextMonthFirst(month){const [y,m]=month.split('-').map(Number);const d=new Date(y,m,1);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-01';}
 
+/* ===== 保存し忘れの確認 =====
+   入力したのに保存していない状態で、タブ・店舗・月の切り替えや他のページへ移動しようとしたら確認する */
+let DIRTY=false;
+function setDirty(v){DIRTY=v;document.getElementById('dirty-bar').classList.toggle('show',v);}
+function confirmLeave(){
+  if(!DIRTY)return true;
+  if(confirm('保存していない入力があります。\n保存せずに移動してよろしいですか？\n（「キャンセル」で入力画面に戻ります）')){setDirty(false);return true;}
+  return false;
+}
+function isFormInput(el){return el&&el.closest&&el.closest('#app-wrap')&&!el.closest('[data-nodirty]')&&el.hasAttribute&&!el.hasAttribute('data-nodirty');}
+document.addEventListener('input',function(e){if(isFormInput(e.target))setDirty(true);});
+document.addEventListener('change',function(e){if(isFormInput(e.target)&&e.target.type==='file'&&e.target.files.length)setDirty(true);});
+// 絞り込み（店舗・月など）を変えるとき：未保存があれば確認し、やめたら元の値に戻す
+function filterGo(el,fn){
+  if(!confirmLeave()){el.value=el.dataset.prev||el.value;return;}
+  el.dataset.prev=el.value;fn();
+}
+// ヘッダーのメニュー・ホームへの移動（config.js の goNav から呼ばれる）
+window.onAppNav=function(id){return !confirmLeave();};
+// ログアウト
+const _appLogout=appLogout;
+appLogout=function(){if(confirmLeave())_appLogout();};
+// ブラウザを閉じる・再読み込み（対応している端末のみ）
+window.addEventListener('beforeunload',function(e){if(DIRTY){e.preventDefault();e.returnValue='';}});
+
+/* ===== 添付ファイル ===== */
 function attachListHtml(atts,delCall){
   return (atts||[]).map(function(a,i){
     return '<div class="att-row"><a class="att-open" href="'+esc(a.url)+'" data-name="'+esc(a.name)+'">'+esc(a.name)+'</a><button type="button" class="btn btn-outline btn-xs" onclick="'+delCall(i)+'">削除</button></div>';
@@ -220,6 +261,7 @@ function autoGrow(el){el.style.height='auto';el.style.height=(el.scrollHeight+2)
 function autoGrowAll(root){(root||document).querySelectorAll('.txt').forEach(autoGrow);}
 document.addEventListener('input',function(e){if(e.target.classList&&e.target.classList.contains('txt'))autoGrow(e.target);});
 
+/* ===== 月の切り替え ===== */
 function monthOptions(selectEl,selected){
   const now=new Date();
   const base=selected?new Date(Number(selected.split('-')[0]),Number(selected.split('-')[1])-1,1):now;
@@ -231,8 +273,10 @@ function monthOptions(selectEl,selected){
     opts+='<option value="'+val+'"'+(val===target?' selected':'')+'>'+d.getFullYear()+'年'+(d.getMonth()+1)+'月</option>';
   }
   selectEl.innerHTML=opts;
+  selectEl.dataset.prev=target;
 }
 function shiftMonth(selectId,delta,reloadFn){
+  if(!confirmLeave())return;
   const el=document.getElementById(selectId);
   const [y,m]=el.value.split('-').map(Number);
   const d=new Date(y,m-1+delta,1);
@@ -243,59 +287,143 @@ function prevMonthStr(m){const [y,mo]=m.split('-').map(Number);const d=new Date(
 function monthLabel(m){const [y,mo]=m.split('-').map(Number);return y+'年'+mo+'月';}
 
 function switchTab(name){
+  const cur=document.querySelector('.tab-btn.active');
+  if(cur&&cur.dataset.tab===name)return;
+  if(!confirmLeave())return;
   document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.toggle('active',b.dataset.tab===name);});
   document.querySelectorAll('.panel').forEach(function(p){p.classList.remove('active');});
   document.getElementById('panel-'+name).classList.add('active');
   if(name==='monthly')loadMonthly();
-  if(name==='store')loadStoreMeeting();
   if(name==='interview')onIvStoreChange();
   if(name==='repnote')onRepTabOpen();
   if(name==='exec')loadExec();
+  if(name==='other')loadOther();
 }
 
-/* ===== 店舗報告（月末報告ほか） ===== */
-// 報告の種類・項目は config.js の reportTypes で管理する（なければ月末報告だけ）
-const REPORT_TYPES=(APP_CONFIG.reportTypes&&APP_CONFIG.reportTypes.length)?APP_CONFIG.reportTypes:[
-  {id:'monthly',icon:'📋',name:'月末報告',note:'',sections:[
-    {title:'店長会議後3日以内に記入',items:[{col:'plan',label:'目標',ph:''},{col:'do_text',label:'行動',ph:''},{col:'deadline_text',label:'期限（ToDo）',ph:''}]},
-    {title:'月末〜月初に記入',items:[{col:'check_text',label:'反省',ph:''},{col:'action',label:'改善',ph:''}]},
+/* ===== 公開範囲（面談報告・その他報告で共通） =====
+   代表・管理者（全権限の人を含む）は、どの公開範囲でも全部見られる。
+   記録した本人も必ず見られる。
+     rep      … 代表のみ
+     manager  … マネージャー以上
+     storeMgr … 店長以上
+     subStore … 副店長以上
+     store    … 同じ店舗の人だけ
+     people   … 名前を指定した人だけ */
+const VIS_OPTIONS=[
+  ['rep','代表のみ'],
+  ['manager','マネージャー以上'],
+  ['storeMgr','店長以上'],
+  ['subStore','副店長以上'],
+  ['store','同じ店舗の人だけ'],
+  ['people','名前を指定する'],
+];
+const VIS_RANK={rep:'代表取締役',manager:'マネージャー',storeMgr:'店長',subStore:'副店長'};
+function visLabel(v){const o=VIS_OPTIONS.find(function(x){return x[0]===v;});return o?o[1]:'店長以上';}
+function isTopViewer(){return !!ME&&(ME.position==='代表取締役'||hasAccess(['管理者'],ME));}
+// r: 記録 / ownerIds: その記録を必ず見られる人（記録した本人など）/ store: 記録の店舗
+function canViewRecord(r,ownerIds,store){
+  if(!ME)return false;
+  if(isTopViewer())return true;
+  if(ownerIds.includes(ME.id))return true;
+  const v=r.visibility||DEFAULT_VIS;
+  if(VIS_RANK[v])return positionOrder(ME.position)<=positionOrder(VIS_RANK[v]);
+  if(v==='store')return !!store&&ME.store===store;
+  if(v==='people')return (r.viewers||[]).includes(ME.id);
+  return false;
+}
+function visSelectHtml(prefix,selected,viewers){
+  const v=selected||DEFAULT_VIS;
+  return '<select class="sel" id="'+prefix+'-vis" style="width:100%" onchange="onVisChange(\''+prefix+'\')">'
+    +VIS_OPTIONS.map(function(o){return '<option value="'+o[0]+'"'+(o[0]===v?' selected':'')+'>'+o[1]+'</option>';}).join('')
+    +'</select>'
+    +'<div id="'+prefix+'-people"'+(v==='people'?'':' style="display:none"')+'>'+(v==='people'?peopleBoxHtml(prefix,viewers):'')+'</div>'
+    +'<div style="font-size:11px;color:var(--soft);margin-top:4px">※代表・管理者と、記録した本人はいつでも見られます</div>';
+}
+function peopleBoxHtml(prefix,checked){
+  const list=activeStudents().filter(function(s){return !ME||s.id!==ME.id;}).filter(function(s){return s.position!=='管理者';}).sort(byOrder);
+  let html='<div class="people-box">',lastStore=null;
+  list.forEach(function(s){
+    if(s.store!==lastStore){html+='<div class="pg">'+esc(storeLabel(s.store))+'</div>';lastStore=s.store;}
+    html+='<label><input type="checkbox" class="'+prefix+'-person" value="'+esc(s.id)+'"'+((checked||[]).includes(s.id)?' checked':'')+'>'+esc(s.name)+'<span style="font-size:11px;color:var(--soft)">'+esc(s.position||'')+'</span></label>';
+  });
+  return html+'</div>';
+}
+function onVisChange(prefix){
+  const v=document.getElementById(prefix+'-vis').value;
+  const box=document.getElementById(prefix+'-people');
+  if(v==='people'){if(!box.innerHTML)box.innerHTML=peopleBoxHtml(prefix,[]);box.style.display='';}
+  else box.style.display='none';
+}
+// 公開範囲の入力値を読む。名前指定で誰も選んでいなければ null
+function readVis(prefix){
+  const v=document.getElementById(prefix+'-vis').value;
+  const viewers=v==='people'?Array.prototype.slice.call(document.querySelectorAll('.'+prefix+'-person:checked')).map(function(el){return el.value;}):[];
+  if(v==='people'&&!viewers.length){alert('公開範囲「名前を指定する」で、見せる人を1人以上選んでください');return null;}
+  return {visibility:v,viewers:viewers};
+}
+
+// スタッフの選択肢：自分の店舗のスタッフを先頭に、その下に他店舗のスタッフ
+function staffOptionsHtml(list,selected,firstStore){
+  let html='';
+  const mine=firstStore?list.filter(function(s){return s.store===firstStore;}):[];
+  if(mine.length){
+    html+='<optgroup label="'+esc(storeLabel(firstStore))+'（自店舗）">'+mine.map(function(s){return staffOpt(s,selected);}).join('')+'</optgroup>';
+  }
+  const others=list.filter(function(s){return s.store!==firstStore;}).sort(byOrder);
+  let cur=null,buf='';
+  others.forEach(function(s){
+    if(s.store!==cur){if(buf)html+=buf+'</optgroup>';buf='<optgroup label="'+esc(storeLabel(s.store))+'">';cur=s.store;}
+    buf+=staffOpt(s,selected);
+  });
+  if(buf)html+=buf+'</optgroup>';
+  return html;
+}
+function staffOpt(s,selected){return '<option value="'+esc(s.id)+'"'+(s.id===selected?' selected':'')+'>'+esc(s.name)+'（'+esc(s.position||'')+'）</option>';}
+// 画面で選んでいる店舗（なければ自分の店舗）を「自店舗」として先頭に出す
+function preferredStore(filterId){
+  const v=document.getElementById(filterId).value;
+  if(v&&v!=='all')return v;
+  return STORE_IDS.includes(ME&&ME.store)?ME.store:null;
+}
+
+/* ===== 月末報告 ===== */
+window.__moRows={};
+// 月末報告の項目（入力するタイミングごとにまとめて表示）  col = pdca_reports の列名
+const MO_SECTIONS=[
+  {title:'店長会議後3日以内に記入',items:[
+    {col:'plan',label:'目標',ph:'今月の目標（数字で）'},
+    {col:'do_text',label:'行動',ph:'目標のために何をするか'},
+    {col:'deadline_text',label:'期限（ToDo）',ph:'誰が・何を・いつまでに行うか'},
+  ]},
+  {title:'月末〜月初に記入',items:[
+    {col:'check_text',label:'反省',ph:'目標に対して結果はどうだったか・できなかった理由'},
+    {col:'action',label:'改善',ph:'来月どう変えるか'},
+  ]},
+  {title:'その他',items:[
+    {col:'other_report',label:'その他報告',ph:''},
+    {col:'other_authority',label:'その他権限要求',ph:''},
   ]},
 ];
-let moType=REPORT_TYPES[0].id;
-window.__moRows={};
-function curType(){return REPORT_TYPES.find(function(t){return t.id===moType;})||REPORT_TYPES[0];}
-function typeItems(t){return t.sections.reduce(function(a,sec){return a.concat(sec.items);},[]);}
-function renderTypeButtons(){
-  document.getElementById('mo-types').innerHTML=REPORT_TYPES.map(function(t){
-    return '<button class="rt-btn'+(t.id===moType?' active':'')+'" onclick="selectReportType(\''+jsq(t.id)+'\')">'+(t.icon?t.icon+' ':'')+esc(t.name)+'</button>';
-  }).join('');
-  document.getElementById('mo-note').textContent=curType().note||'';
-}
-function selectReportType(id){
-  moType=id;
-  try{localStorage.setItem('report_type_last',id);}catch(e){}
-  renderTypeButtons();
-  loadMonthly();
-}
+const MO_ITEMS=MO_SECTIONS.reduce(function(a,s){return a.concat(s.items);},[]);
 function moBlockHtml(store,i){
-  const k='mo'+i,t=curType();
-  return '<div class="store-head">'+esc(storeLabel(store))+'　<span style="font-weight:500;color:var(--mid);font-size:12px">'+esc(t.name)+'</span></div>'
+  const k='mo'+i;
+  return '<div class="store-head">'+esc(storeLabel(store))+'</div>'
     +'<div class="card"><button class="prev-toggle" onclick="togglePrev(\''+k+'\')" id="'+k+'-prev-toggle">▼ 前月の内容を確認</button>'
     +'<div class="prev-compact" id="'+k+'-prev-box" style="display:none">'
-    +typeItems(t).map(function(x){
+    +MO_ITEMS.map(function(x){
       return '<div class="pf"><div class="pf-label">'+esc(x.label)+'</div><div class="pf-body" id="'+k+'-prev-'+x.col+'"></div></div>';
     }).join('')
     +'</div></div>'
     +'<div class="card"><div class="card-title" id="'+k+'-cur-label">当月</div>'
-    +t.sections.map(function(sec){
+    +MO_SECTIONS.map(function(sec){
       return '<div class="sec-title">◆ '+esc(sec.title)+'</div>'
         +sec.items.map(function(x){
-          return '<div class="field"><label>'+esc(x.label)+'</label><textarea class="txt" id="'+k+'-cur-'+x.col+'" placeholder="'+esc(x.ph||'')+'"></textarea></div>';
+          return '<div class="field"><label>'+esc(x.label)+'</label><textarea class="txt" id="'+k+'-cur-'+x.col+'" placeholder="'+esc(x.ph)+'"></textarea></div>';
         }).join('');
     }).join('')
     +'<div class="field"><label>添付ファイル</label><div id="'+k+'-attach-list"></div><input type="file" class="inp" id="'+k+'-attach-new" multiple></div>'
     +'<div class="iv-meta" id="'+k+'-updated" style="text-align:right;margin-bottom:6px"></div>'
-    +'<div class="save-row"><button class="btn btn-dark" onclick="saveMonthly('+i+')">'+esc(storeLabel(store))+'の'+esc(t.name)+'を保存</button></div></div>';
+    +'<div class="save-row"><button class="btn btn-dark" onclick="saveMonthly('+i+')">'+esc(storeLabel(store))+'を保存</button></div></div>';
 }
 function togglePrev(k){
   const box=document.getElementById(k+'-prev-box');
@@ -304,27 +432,22 @@ function togglePrev(k){
   const btn=document.getElementById(k+'-prev-toggle');
   btn.textContent=btn.textContent.replace(open?'▲':'▼',open?'▼':'▲');
 }
-function fmtDateTime(iso){
-  if(!iso)return '';
-  const d=new Date(iso);
-  return (d.getMonth()+1)+'/'+d.getDate()+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
-}
 async function loadMonthly(){
   const monthSel=document.getElementById('mo-month');
   if(!monthSel.options.length)monthOptions(monthSel,null);
-  const month=monthSel.value,prev=prevMonthStr(month),t=curType(),items=typeItems(t);
+  const month=monthSel.value,prev=prevMonthStr(month);
   const stores=targetStores(document.getElementById('mo-store').value);
   document.getElementById('mo-blocks').innerHTML=stores.map(function(s){return moBlockHtml(s,STORE_IDS.indexOf(s));}).join('');
-  const {data,error}=await sb.from('pdca_reports').select('*').in('store',stores).eq('report_type',t.id).in('month',[month,prev]);
+  setDirty(false);
+  const {data,error}=await sb.from('pdca_reports').select('*').in('store',stores).eq('report_type','monthly').in('month',[month,prev]);
   if(error){alert('読み込みエラー: '+error.message);return;}
-  if(t.id!==moType)return;   // 読み込み中に種類を切り替えた場合は古い結果を捨てる
   stores.forEach(function(store){
     const k='mo'+STORE_IDS.indexOf(store);
     const cur=(data||[]).find(function(r){return r.store===store&&r.month===month;});
     const pr=(data||[]).find(function(r){return r.store===store&&r.month===prev;});
     document.getElementById(k+'-prev-toggle').textContent='▼ 前月（'+monthLabel(prev)+'）の内容を確認';
     document.getElementById(k+'-cur-label').textContent='当月（'+monthLabel(month)+'）';
-    items.forEach(function(x){
+    MO_ITEMS.forEach(function(x){
       const pv=pr?pr[x.col]:'';
       const el=document.getElementById(k+'-prev-'+x.col);
       el.textContent=pv||'（未記入）';el.classList.toggle('empty',!pv);
@@ -338,181 +461,138 @@ async function loadMonthly(){
   autoGrowAll();
 }
 async function saveMonthly(i){
-  const store=STORE_IDS[i],k='mo'+i,t=curType();
+  const store=STORE_IDS[i],k='mo'+i;
   const month=document.getElementById('mo-month').value;
   const fileInput=document.getElementById(k+'-attach-new');
   const added=fileInput.files.length?await uploadAttachments(fileInput.files):[];
   const existing=(window.__moRows[store]&&window.__moRows[store].attachments)||[];
-  const payload={store,month,report_type:t.id,attachments:existing.concat(added),updated_at:new Date().toISOString()};
-  typeItems(t).forEach(function(x){payload[x.col]=document.getElementById(k+'-cur-'+x.col).value;});
+  const payload={store,month,report_type:'monthly',attachments:existing.concat(added),updated_at:new Date().toISOString()};
+  MO_ITEMS.forEach(function(x){payload[x.col]=document.getElementById(k+'-cur-'+x.col).value;});
   const {error}=await sb.from('pdca_reports').upsert(payload,{onConflict:'store,month,report_type'});
   if(error){alert('エラー: '+error.message);return;}
-  alert(storeLabel(store)+'の'+t.name+'を保存しました');
+  setDirty(false);
+  alert(storeLabel(store)+'を保存しました');
   loadMonthly();
 }
 async function delMoAttachment(i,idx){
   const store=STORE_IDS[i],r=window.__moRows[store];if(!r)return;
   const atts=(r.attachments||[]).slice();atts.splice(idx,1);
-  const {error}=await sb.from('pdca_reports').update({attachments:atts}).eq('store',store).eq('month',document.getElementById('mo-month').value).eq('report_type',curType().id);
+  const {error}=await sb.from('pdca_reports').update({attachments:atts}).eq('store',store).eq('month',document.getElementById('mo-month').value).eq('report_type','monthly');
   if(error){alert('エラー: '+error.message);return;}
   loadMonthly();
 }
 
-/* ===== 店舗ミーティング ===== */
-let smItemsByStore={};
-window.__smRows={};
-function smBlockHtml(store,i){
-  const k='sm'+i;
-  return '<div class="store-head">'+esc(storeLabel(store))+'</div>'
-    +'<div class="card"><div class="card-title">1. 会議の目的</div><textarea class="txt" id="'+k+'-purpose" placeholder="店舗の状況とスタッフの状況報告 など"></textarea></div>'
-    +'<div class="card"><div class="card-title">2. 店舗の状況報告</div><div id="'+k+'-items"></div><button class="btn btn-outline btn-sm" onclick="addStoreItem('+i+')">＋ 項目を追加</button></div>'
-    +'<div class="card"><div class="card-title">3. 次回までのToDo／完了結果</div><textarea class="txt" id="'+k+'-todo" placeholder="誰が・いつまでに・何を行うか"></textarea></div>'
-    +'<div class="card"><div class="card-title">4. 次回会議の予定</div>'
-    +'<div class="field"><label>日時</label><input class="inp" type="text" id="'+k+'-next-date" placeholder="例：2026年10月29日（木）"></div>'
-    +'<div class="field"><label>議題案</label><input class="inp" type="text" id="'+k+'-next-agenda"></div>'
-    +'<div class="field"><label>進行役</label><input class="inp" type="text" id="'+k+'-next-facilitator"></div></div>'
-    +'<div class="card"><div class="card-title">添付ファイル</div><div id="'+k+'-attach-list"></div><input type="file" class="inp" id="'+k+'-attach-new" multiple></div>'
-    +'<div class="save-row"><button class="btn btn-dark" onclick="saveStoreMeeting('+i+')">'+esc(storeLabel(store))+'を保存</button></div>';
-}
-function renderSmItems(i){
-  const store=STORE_IDS[i];
-  const wrap=document.getElementById('sm'+i+'-items');
-  wrap.innerHTML=smItemsByStore[store].map(function(it,j){
-    return '<div class="item-block"><div class="item-num">項目 '+(j+1)+'</div>'
-      +'<button class="item-del" onclick="removeStoreItem('+i+','+j+')">×</button>'
-      +'<div class="field"><label>概要</label><input class="inp" data-j="'+j+'" data-f="title" value="'+esc(it.title)+'" onchange="updSmItem('+i+',this)"></div>'
-      +'<div class="field"><label>検討内容</label><textarea class="txt" data-j="'+j+'" data-f="detail" onchange="updSmItem('+i+',this)">'+esc(it.detail)+'</textarea></div>'
-      +'<div class="field"><label>確認事項</label><textarea class="txt" data-j="'+j+'" data-f="check" onchange="updSmItem('+i+',this)">'+esc(it.check)+'</textarea></div>'
-      +'</div>';
-  }).join('')||'<div class="empty-msg">項目がありません</div>';
-  autoGrowAll(wrap);
-}
-function updSmItem(i,el){smItemsByStore[STORE_IDS[i]][el.dataset.j][el.dataset.f]=el.value;}
-function addStoreItem(i){smItemsByStore[STORE_IDS[i]].push({title:'',detail:'',check:''});renderSmItems(i);}
-function removeStoreItem(i,j){smItemsByStore[STORE_IDS[i]].splice(j,1);renderSmItems(i);}
-async function loadStoreMeeting(){
-  const monthSel=document.getElementById('sm-month');
-  if(!monthSel.options.length)monthOptions(monthSel,null);
-  const month=monthSel.value;
-  const stores=targetStores(document.getElementById('sm-store').value);
-  document.getElementById('sm-blocks').innerHTML=stores.map(function(s){return smBlockHtml(s,STORE_IDS.indexOf(s));}).join('');
-  const {data}=await sb.from('store_meetings').select('*').in('store',stores).eq('month',month);
-  stores.forEach(function(store){
-    const i=STORE_IDS.indexOf(store),k='sm'+i;
-    const d=(data||[]).find(function(r){return r.store===store;});
-    document.getElementById(k+'-purpose').value=d?d.purpose||'':'';
-    document.getElementById(k+'-todo').value=d?d.todo||'':'';
-    document.getElementById(k+'-next-date').value=d?d.next_date||'':'';
-    document.getElementById(k+'-next-agenda').value=d?d.next_agenda||'':'';
-    document.getElementById(k+'-next-facilitator').value=d?d.next_facilitator||'':'';
-    smItemsByStore[store]=(d&&d.status_items&&d.status_items.length)?d.status_items:[{title:'',detail:'',check:''}];
-    renderSmItems(i);
-    window.__smRows[store]=d||null;
-    document.getElementById(k+'-attach-list').innerHTML=attachListHtml(d&&d.attachments,function(ai){return 'delSmAttachment('+i+','+ai+')';});
-  });
-  autoGrowAll();
-}
-async function saveStoreMeeting(i){
-  const store=STORE_IDS[i],k='sm'+i;
-  const month=document.getElementById('sm-month').value;
-  const fileInput=document.getElementById(k+'-attach-new');
-  const added=fileInput.files.length?await uploadAttachments(fileInput.files):[];
-  const existing=(window.__smRows[store]&&window.__smRows[store].attachments)||[];
-  const payload={
-    store,month,
-    purpose:document.getElementById(k+'-purpose').value,
-    status_items:smItemsByStore[store],
-    todo:document.getElementById(k+'-todo').value,
-    next_date:document.getElementById(k+'-next-date').value,
-    next_agenda:document.getElementById(k+'-next-agenda').value,
-    next_facilitator:document.getElementById(k+'-next-facilitator').value,
-    attachments:existing.concat(added),
-    updated_at:new Date().toISOString()
-  };
-  const {error}=await sb.from('store_meetings').upsert(payload,{onConflict:'store,month'});
-  if(error){alert('エラー: '+error.message);return;}
-  alert(storeLabel(store)+'を保存しました');
-  loadStoreMeeting();
-}
-async function delSmAttachment(i,idx){
-  const store=STORE_IDS[i],r=window.__smRows[store];if(!r)return;
-  const atts=(r.attachments||[]).slice();atts.splice(idx,1);
-  const {error}=await sb.from('store_meetings').update({attachments:atts}).eq('store',store).eq('month',document.getElementById('sm-month').value);
-  if(error){alert('エラー: '+error.message);return;}
-  loadStoreMeeting();
-}
-
-/* ===== 面談報告 ===== */
+/* ===== 面談報告 =====
+   定期面談・育成面談などをまとめて記録する。記録ごとに公開範囲を選ぶ。
+   編集・削除できるのは、記録した本人・面談担当者・代表・管理者 */
+// 面談の入力項目  col = staff_interviews の列名
+const IV_FIELDS=[
+  {col:'content',     label:'本人の今の状況・話した内容', ph:'仕事・練習・数字の状況、本人が話したこと'},
+  {col:'goal',        label:'目標・育成目標',             ph:'例：12月までにカラー合格／指名売上50万円'},
+  {col:'concern',     label:'課題・悩み',                 ph:'本人が困っていること、担当者から見た課題'},
+  {col:'next_action', label:'次回までのアクション',       ph:'誰が・何を・いつまでに行うか'},
+  {col:'notes',       label:'担当者メモ・特記事項',       ph:''},
+];
 let ivInlineEditId=null;
 window.__ivRows={};
-function ivTargets(store){
-  return activeStudents().filter(function(s){return !NOT_TARGET.includes(s.position)&&(store==='all'||s.store===store);}).sort(byOrder);
-}
-function studentOpts(store){return ivTargets(store).map(function(s){return '<option value="'+esc(s.id)+'">'+esc(s.name)+'</option>';}).join('');}
-// 面談担当者：その店舗の担当役職＋全店共通の人（代表など）＋マネージャー
-function interviewerOpts(store,selected){
-  const list=activeStudents().filter(function(s){
-    if(!INTERVIEWER_ROLES.includes(s.position))return false;
-    return store==='all'||s.store===store||s.store===ALL||s.position==='マネージャー';
-  }).sort(function(a,b){return positionOrder(a.position)-positionOrder(b.position);});
+function ivTargets(){return activeStudents().filter(function(s){return !NOT_TARGET.includes(s.position);});}
+// 面談担当者の候補：担当役職の人（全店舗）
+function interviewerOptsHtml(selected){
+  const list=activeStudents().filter(function(s){return INTERVIEWER_ROLES.includes(s.position);}).sort(byOrder);
   return '<option value="">選択してください</option>'+list.map(function(s){
-    return '<option value="'+esc(s.name)+'"'+(s.name===selected?' selected':'')+'>'+esc(s.name)+'（'+esc(s.position)+'）</option>';
+    return '<option value="'+esc(s.name)+'"'+(s.name===selected?' selected':'')+'>'+esc(s.name)+'（'+esc(s.position)+'・'+esc(storeLabel(s.store))+'）</option>';
   }).join('');
+}
+function ivFormHtml(p,r){
+  r=r||{};
+  const typeIsFree=r.interview_type&&!IV_TYPES.includes(r.interview_type);
+  return (p==='iv'?'<div class="field"><label>対象スタッフ</label><select class="sel" id="iv-student" style="width:100%"><option value="">選択してください</option>'+staffOptionsHtml(ivTargets(),'',preferredStore('iv-store'))+'</select></div>':'')
+    +'<div class="field"><label>面談の種類</label><select class="sel" id="'+p+'-type" style="width:100%">'
+      +IV_TYPES.map(function(t){return '<option value="'+esc(t)+'"'+(t===r.interview_type?' selected':'')+'>'+esc(t)+'</option>';}).join('')
+      +(typeIsFree?'<option value="'+esc(r.interview_type)+'" selected>'+esc(r.interview_type)+'</option>':'')
+    +'</select></div>'
+    +'<div class="field"><label>面談日</label><input class="inp" type="date" id="'+p+'-date" value="'+esc(r.interview_date||(p==='iv'?today():''))+'"></div>'
+    +'<div class="field"><label>面談担当者</label><select class="sel" id="'+p+'-interviewer" style="width:100%">'+interviewerOptsHtml(r.interviewer!=null?r.interviewer:(p==='iv'&&ME&&INTERVIEWER_ROLES.includes(ME.position)?ME.name:''))+'</select></div>'
+    +IV_FIELDS.map(function(f){
+      return '<div class="field"><label>'+esc(f.label)+'</label><textarea class="txt" id="'+p+'-'+f.col+'" placeholder="'+esc(f.ph)+'">'+esc(r[f.col]||'')+'</textarea></div>';
+    }).join('')
+    +'<div class="field"><label>次回面談の予定日</label><input class="inp" type="date" id="'+p+'-next-date" value="'+esc(r.next_date||'')+'"></div>'
+    +'<div class="field"><label>添付ファイル</label>'+(p!=='iv'?attachListHtml(r.attachments,function(i){return 'delIvAttachment('+r.id+','+i+')';}):'')+'<input type="file" class="inp" id="'+p+'-attach" multiple></div>'
+    +'<div class="field"><label>公開範囲（この記録を見られる人）</label>'+(canChangeIvVis(r)?visSelectHtml(p,r.visibility,r.viewers):'<div class="iv-body">'+esc(visLabel(r.visibility||DEFAULT_VIS))+'（変更できるのは記録した本人・代表・管理者）</div>')+'</div>';
+}
+function ivOwnerIds(r){
+  const ids=[];if(r.author_id)ids.push(r.author_id);
+  if(r.interviewer){const s=students.find(function(x){return x.name===r.interviewer;});if(s)ids.push(s.id);}
+  return ids;
+}
+function canViewIv(r){return canViewRecord(r,ivOwnerIds(r),r.store);}
+function canEditIv(r){return isTopViewer()||ivOwnerIds(r).includes(ME&&ME.id);}
+function canChangeIvVis(r){return !r.id||isTopViewer()||(!!ME&&r.author_id===ME.id);}
+function readIvForm(p){
+  const payload={
+    interview_type:document.getElementById(p+'-type').value,
+    interviewer:document.getElementById(p+'-interviewer').value,
+    interview_date:document.getElementById(p+'-date').value||null,
+    next_date:document.getElementById(p+'-next-date').value||null,
+  };
+  IV_FIELDS.forEach(function(f){payload[f.col]=document.getElementById(p+'-'+f.col).value;});
+  if(document.getElementById(p+'-vis')){
+    const vis=readVis(p);if(!vis)return null;
+    payload.visibility=vis.visibility;payload.viewers=vis.viewers;
+  }
+  return payload;
 }
 function onIvStoreChange(){
   const store=document.getElementById('iv-store').value;
-  const opts=studentOpts(store);
-  document.getElementById('iv-student').innerHTML=opts?'<option value="">選択してください</option>'+opts:'<option value="">対象スタッフなし</option>';
-  document.getElementById('iv-name-filter').innerHTML='<option value="">全員</option>'+opts;
-  document.getElementById('iv-interviewer').innerHTML=interviewerOpts(store);
+  const list=ivTargets().filter(function(s){return store==='all'||s.store===store;}).sort(byOrder);
+  document.getElementById('iv-name-filter').innerHTML='<option value="">全員</option>'+list.map(function(s){return '<option value="'+esc(s.id)+'">'+esc(s.name)+'</option>';}).join('');
+  document.getElementById('iv-name-filter').dataset.prev='';
   const monthSel=document.getElementById('iv-month');
   if(!monthSel.options.length)monthOptions(monthSel,null);
+  resetIvForm();
   renderInterviewList();
 }
 function resetIvForm(){
-  ['iv-student','iv-interviewer','iv-date','iv-content','iv-next','iv-notes','iv-attach'].forEach(function(id){document.getElementById(id).value='';});
+  document.getElementById('iv-form').innerHTML=ivFormHtml('iv',null);
+  setDirty(false);
 }
-function onIvMonthNav(){resetIvForm();renderInterviewList();}
 async function addInterview(){
   const student_id=document.getElementById('iv-student').value;
   if(!student_id){alert('対象スタッフを選択してください');return;}
   const btn=document.getElementById('iv-add-btn');
   if(btn.disabled)return;
-  btn.disabled=true;
+  const payload=readIvForm('iv');if(!payload)return;
+  btn.disabled=true;btn.textContent='保存中…';
   try{
-    const st=students.find(function(s){return s.id===student_id;});
+    const st=studentById(student_id);
     const fileInput=document.getElementById('iv-attach');
-    const payload={
-      student_id,store:st?st.store:null,
-      interviewer:document.getElementById('iv-interviewer').value,
-      interview_date:document.getElementById('iv-date').value||null,
-      content:document.getElementById('iv-content').value,
-      next_action:document.getElementById('iv-next').value,
-      notes:document.getElementById('iv-notes').value,
-      attachments:fileInput.files.length?await uploadAttachments(fileInput.files):[]
-    };
+    payload.student_id=student_id;
+    payload.store=st?st.store:null;
+    payload.author_id=ME?ME.id:null;
+    payload.attachments=fileInput.files.length?await uploadAttachments(fileInput.files):[];
     const {error}=await sb.from('staff_interviews').insert(payload);
     if(error){alert('エラー: '+error.message);return;}
+    alert('面談記録を保存しました');
     resetIvForm();
     renderInterviewList();
-  }finally{btn.disabled=false;}
+  }finally{btn.disabled=false;btn.textContent='保存する';}
 }
-async function toggleIvEditRow(id){ivInlineEditId=(ivInlineEditId===id)?null:id;await renderInterviewList();autoGrowAll();}
-function cancelIvInlineEdit(){ivInlineEditId=null;renderInterviewList();}
+async function toggleIvEditRow(id){
+  if(!confirmLeave())return;
+  ivInlineEditId=(ivInlineEditId===id)?null:id;
+  await renderInterviewList();autoGrowAll();
+}
+function cancelIvInlineEdit(){if(!confirmLeave())return;ivInlineEditId=null;renderInterviewList();}
 async function saveIvInlineEdit(id){
-  const fileInput=document.getElementById('ivedit-attach-new-'+id);
+  const r=window.__ivRows[id];if(!r||!canEditIv(r))return;
+  const p='ivedit'+id;
+  const payload=readIvForm(p);if(!payload)return;
+  const fileInput=document.getElementById(p+'-attach');
   const added=fileInput.files.length?await uploadAttachments(fileInput.files):[];
-  const existing=(window.__ivRows[id]&&window.__ivRows[id].attachments)||[];
-  const payload={
-    interviewer:document.getElementById('ivedit-interviewer-'+id).value,
-    interview_date:document.getElementById('ivedit-date-'+id).value||null,
-    content:document.getElementById('ivedit-content-'+id).value,
-    next_action:document.getElementById('ivedit-next-'+id).value,
-    notes:document.getElementById('ivedit-notes-'+id).value,
-    attachments:existing.concat(added)
-  };
+  payload.attachments=(r.attachments||[]).concat(added);
   const {error}=await sb.from('staff_interviews').update(payload).eq('id',id);
   if(error){alert('エラー: '+error.message);return;}
+  setDirty(false);
   ivInlineEditId=null;
   renderInterviewList();
 }
@@ -524,7 +604,8 @@ async function delIvAttachment(id,idx){
   renderInterviewList();
 }
 async function delInterview(id){
-  if(!confirm('この記録を削除しますか？'))return;
+  const r=window.__ivRows[id];if(!r||!canEditIv(r))return;
+  if(!confirm('この面談記録を削除しますか？'))return;
   const {error}=await sb.from('staff_interviews').delete().eq('id',id);
   if(error){alert('エラー: '+error.message);return;}
   renderInterviewList();
@@ -533,50 +614,179 @@ async function renderInterviewList(){
   const store=document.getElementById('iv-store').value;
   const nameFilter=document.getElementById('iv-name-filter').value;
   const month=document.getElementById('iv-month').value;
-  const [y,m]=month.split('-').map(Number);
-  const nd=new Date(y,m,1);
-  const monthEnd=nd.getFullYear()+'-'+String(nd.getMonth()+1).padStart(2,'0')+'-01';
-  let q=sb.from('staff_interviews').select('*').gte('interview_date',month+'-01').lt('interview_date',monthEnd).order('interview_date',{ascending:false});
+  let q=sb.from('staff_interviews').select('*').gte('interview_date',month+'-01').lt('interview_date',nextMonthFirst(month)).order('interview_date',{ascending:false});
   if(store!=='all')q=q.eq('store',store);
   if(nameFilter)q=q.eq('student_id',nameFilter);
-  const {data}=await q;
+  const {data,error}=await q;
   const list=document.getElementById('iv-list');
-  if(!data||!data.length){list.innerHTML='<div class="empty-msg">面談記録がありません</div>';return;}
+  if(error){list.innerHTML='<div class="empty-msg">読み込みエラー: '+esc(error.message)+'</div>';return;}
+  const rows=(data||[]).filter(canViewIv);
+  if(!rows.length){list.innerHTML='<div class="empty-msg">この月の面談記録はありません</div>';return;}
   window.__ivRows={};
   function rowHtml(r){
     window.__ivRows[r.id]=r;
-    const st=students.find(function(s){return s.id===r.student_id;});
+    const st=studentById(r.student_id);
     const name=st?st.name:'（不明）';
     if(ivInlineEditId===r.id){
       return '<div class="iv-row"><div class="iv-row-head"><span class="iv-name">'+esc(name)+'</span></div>'
-        +'<div class="field"><label>面談担当者</label><select class="sel" id="ivedit-interviewer-'+r.id+'" style="width:100%">'+interviewerOpts(r.store||'all',r.interviewer)+'</select></div>'
-        +'<div class="field"><label>面談日</label><input class="inp" type="date" id="ivedit-date-'+r.id+'" value="'+esc(r.interview_date||'')+'"></div>'
-        +'<div class="field"><label>面談内容</label><textarea class="txt" id="ivedit-content-'+r.id+'">'+esc(r.content||'')+'</textarea></div>'
-        +'<div class="field"><label>今後のアクション</label><textarea class="txt" id="ivedit-next-'+r.id+'">'+esc(r.next_action||'')+'</textarea></div>'
-        +'<div class="field"><label>特記事項</label><textarea class="txt" id="ivedit-notes-'+r.id+'">'+esc(r.notes||'')+'</textarea></div>'
-        +'<div class="field"><label>添付ファイル</label>'+attachListHtml(r.attachments,function(i){return 'delIvAttachment('+r.id+','+i+')';})
-        +'<input type="file" class="inp" id="ivedit-attach-new-'+r.id+'" multiple></div>'
+        +ivFormHtml('ivedit'+r.id,r)
         +'<div class="save-row"><button class="btn btn-outline" onclick="cancelIvInlineEdit()">キャンセル</button><button class="btn btn-dark" onclick="saveIvInlineEdit('+r.id+')">更新する</button></div></div>';
     }
-    return '<div class="iv-row"><div class="iv-row-head"><span class="iv-name">'+esc(name)+'</span><span class="iv-meta">'+esc(r.interview_date||'')+'　担当：'+esc(r.interviewer||'—')+'</span>'
-      +'<button class="btn btn-outline btn-xs" onclick="toggleIvEditRow('+r.id+')">編集</button>'
-      +'<button class="btn btn-red btn-xs" onclick="delInterview('+r.id+')">削除</button></div>'
-      +(r.content?'<div class="iv-label">面談内容</div><div class="iv-body">'+esc(r.content)+'</div>':'')
-      +(r.next_action?'<div class="iv-label">今後のアクション</div><div class="iv-body">'+esc(r.next_action)+'</div>':'')
-      +(r.notes?'<div class="iv-label">特記事項</div><div class="iv-body">'+esc(r.notes)+'</div>':'')
+    return '<div class="iv-row"><div class="iv-row-head"><span class="iv-name">'+(r.interview_type?'<span class="type-badge">'+esc(r.interview_type)+'</span>':'')+esc(name)+'<span class="vis-badge">🔒 '+esc(r.visibility==='people'?'指定した人':visLabel(r.visibility||DEFAULT_VIS))+'</span></span>'
+      +'<span class="iv-meta">'+esc(r.interview_date||'')+'　担当：'+esc(r.interviewer||'—')+'</span>'
+      +(canEditIv(r)?'<span><button class="btn btn-outline btn-xs" onclick="toggleIvEditRow('+r.id+')">編集</button> <button class="btn btn-red btn-xs" onclick="delInterview('+r.id+')">削除</button></span>':'')+'</div>'
+      +IV_FIELDS.map(function(f){return r[f.col]?'<div class="iv-label">'+esc(f.label)+'</div><div class="iv-body">'+esc(r[f.col])+'</div>':'';}).join('')
+      +(r.next_date?'<div class="iv-label">次回面談の予定日</div><div class="iv-body">'+esc(r.next_date)+'</div>':'')
       +attachLinksHtml(r.attachments)+'</div>';
   }
   if(store==='all'){
     list.innerHTML=STORE_IDS.concat([ALL]).map(function(s){
-      const rows=data.filter(function(r){return r.store===s;});
-      return rows.length?'<div class="store-head">'+esc(storeLabel(s))+'</div>'+rows.map(rowHtml).join(''):'';
-    }).join('')||'<div class="empty-msg">面談記録がありません</div>';
+      const rs=rows.filter(function(r){return r.store===s;});
+      return rs.length?'<div class="store-head">'+esc(storeLabel(s))+'</div>'+rs.map(rowHtml).join(''):'';
+    }).join('')||'<div class="empty-msg">この月の面談記録はありません</div>';
   } else {
-    list.innerHTML=data.map(rowHtml).join('');
+    list.innerHTML=rows.map(rowHtml).join('');
   }
+  autoGrowAll(list);
 }
 
-/* ===== 代表管理 ===== */
+/* ===== その他報告 =====
+   種類（集客・SNS、イベント・キャンペーンなど）を選ぶか、自由に入力して報告する。記録ごとに公開範囲を選ぶ。
+   編集・削除できるのは、報告者・入力した本人・代表・管理者 */
+let orEditId=null;
+window.__orRows={};
+function orCategoryOptsHtml(selected){
+  const names=OR_CATEGORIES.map(function(c){return c.name;});
+  const isFree=selected&&!names.includes(selected);
+  return OR_CATEGORIES.map(function(c){return '<option value="'+esc(c.name)+'"'+(c.name===selected?' selected':'')+'>'+esc(c.name)+'</option>';}).join('')
+    +'<option value="'+OR_FREE+'"'+(isFree?' selected':'')+'>✏️ その他（自分で入力）</option>';
+}
+function orFormHtml(p,r){
+  r=r||{};
+  const names=OR_CATEGORIES.map(function(c){return c.name;});
+  const isFree=r.category&&!names.includes(r.category);
+  const firstStore=preferredStore('or-store');
+  const reporterId=r.student_id||(ME?ME.id:'');
+  return (p==='or'?'<div class="field"><label>報告者</label><select class="sel" id="or-student" style="width:100%">'+staffOptionsHtml(activeStudents().filter(function(s){return s.position!=='管理者'||s.id===(ME&&ME.id);}),reporterId,firstStore)+'</select></div>':'')
+    +'<div class="field"><label>報告の種類</label><select class="sel" id="'+p+'-cat" style="width:100%" onchange="onOrCatChange(\''+p+'\')">'+orCategoryOptsHtml(r.category||names[0])+'</select>'
+    +'<input class="inp" id="'+p+'-cat-free" placeholder="報告の種類を入力（例：求人・採用）" value="'+esc(isFree?r.category:'')+'" style="margin-top:6px;'+(isFree?'':'display:none')+'"></div>'
+    +'<div class="field"><label>日付</label><input class="inp" type="date" id="'+p+'-date" value="'+esc(r.report_date||(p==='or'?today():''))+'"></div>'
+    +'<div class="field"><label>件名</label><input class="inp" id="'+p+'-title" value="'+esc(r.title||'')+'" placeholder="ひとことで"></div>'
+    +'<div class="field"><label>内容</label><textarea class="txt" id="'+p+'-content" placeholder="'+esc(orPh(r.category||names[0]))+'">'+esc(r.content||'')+'</textarea></div>'
+    +'<div class="field"><label>添付ファイル</label>'+(p!=='or'?attachListHtml(r.attachments,function(i){return 'delOrAttachment(\''+jsq(r.id)+'\','+i+')';}):'')+'<input type="file" class="inp" id="'+p+'-attach" multiple></div>'
+    +'<div class="field"><label>公開範囲（この報告を見られる人）</label>'+(canChangeOrVis(r)?visSelectHtml(p,r.visibility,r.viewers):'<div class="iv-body">'+esc(visLabel(r.visibility||DEFAULT_VIS))+'（変更できるのは記録した本人・代表・管理者）</div>')+'</div>';
+}
+function orPh(cat){const c=OR_CATEGORIES.find(function(x){return x.name===cat;});return c&&c.ph?c.ph:'';}
+function onOrCatChange(p){
+  const v=document.getElementById(p+'-cat').value;
+  document.getElementById(p+'-cat-free').style.display=(v===OR_FREE)?'':'none';
+  document.getElementById(p+'-content').placeholder=orPh(v);
+}
+function orOwnerIds(r){const ids=[];if(r.author_id)ids.push(r.author_id);if(r.student_id)ids.push(r.student_id);return ids;}
+function canViewOr(r){return canViewRecord(r,orOwnerIds(r),r.store);}
+function canEditOr(r){return isTopViewer()||orOwnerIds(r).includes(ME&&ME.id);}
+function canChangeOrVis(r){return !r.id||isTopViewer()||(!!ME&&orOwnerIds(r).includes(ME.id));}
+function readOrForm(p){
+  let cat=document.getElementById(p+'-cat').value;
+  if(cat===OR_FREE){cat=document.getElementById(p+'-cat-free').value.trim();if(!cat){alert('報告の種類を入力してください');return null;}}
+  const title=document.getElementById(p+'-title').value.trim();
+  const content=document.getElementById(p+'-content').value;
+  if(!title&&!content.trim()){alert('件名か内容を入力してください');return null;}
+  const payload={category:cat,title:title,content:content,report_date:document.getElementById(p+'-date').value||null};
+  if(document.getElementById(p+'-vis')){
+    const vis=readVis(p);if(!vis)return null;
+    payload.visibility=vis.visibility;payload.viewers=vis.viewers;
+  }
+  return payload;
+}
+function resetOrForm(){
+  document.getElementById('or-form').innerHTML=orFormHtml('or',null);
+  setDirty(false);
+}
+async function loadOther(){
+  const monthSel=document.getElementById('or-month');
+  if(!monthSel.options.length)monthOptions(monthSel,null);
+  const month=monthSel.value,store=document.getElementById('or-store').value,cat=document.getElementById('or-cat-filter').value;
+  if(!document.getElementById('or-form').innerHTML||!DIRTY)resetOrForm();
+  let q=sb.from('other_reports').select('*').gte('report_date',month+'-01').lt('report_date',nextMonthFirst(month)).order('report_date',{ascending:false}).order('created_at',{ascending:false});
+  if(store!=='all')q=q.eq('store',store);
+  const {data,error}=await q;
+  const list=document.getElementById('or-list');
+  if(error){list.innerHTML='<div class="empty-msg">読み込みエラー: '+esc(error.message)+'</div>';return;}
+  const names=OR_CATEGORIES.map(function(c){return c.name;});
+  let rows=(data||[]).filter(canViewOr);
+  if(cat===OR_FREE)rows=rows.filter(function(r){return !names.includes(r.category);});
+  else if(cat)rows=rows.filter(function(r){return r.category===cat;});
+  if(!rows.length){list.innerHTML='<div class="empty-msg">この月の報告はありません</div>';return;}
+  window.__orRows={};
+  list.innerHTML=rows.map(function(r){
+    window.__orRows[r.id]=r;
+    const st=studentById(r.student_id);
+    const name=st?st.name:'（不明）';
+    if(orEditId!=null&&String(orEditId)===String(r.id)){
+      return '<div class="iv-row"><div class="iv-row-head"><span class="iv-name">'+esc(name)+'（'+esc(storeLabel(r.store))+'）</span></div>'
+        +orFormHtml('oredit'+r.id,r)
+        +'<div class="save-row"><button class="btn btn-outline" onclick="cancelOrEdit()">キャンセル</button><button class="btn btn-dark" onclick="saveOrEdit(\''+jsq(r.id)+'\')">更新する</button></div></div>';
+    }
+    return '<div class="iv-row"><div class="iv-row-head"><span class="iv-name"><span class="type-badge">'+esc(r.category||'その他')+'</span>'+esc(r.title||'（件名なし）')+'<span class="vis-badge">🔒 '+esc(r.visibility==='people'?'指定した人':visLabel(r.visibility||DEFAULT_VIS))+'</span></span>'
+      +'<span class="iv-meta">'+esc(r.report_date||'')+'　'+esc(name)+'（'+esc(storeLabel(r.store))+'）</span>'
+      +(canEditOr(r)?'<span><button class="btn btn-outline btn-xs" onclick="toggleOrEdit(\''+jsq(r.id)+'\')">編集</button> <button class="btn btn-red btn-xs" onclick="deleteOther(\''+jsq(r.id)+'\')">削除</button></span>':'')+'</div>'
+      +'<div class="iv-body">'+esc(r.content||'')+'</div>'+attachLinksHtml(r.attachments)+'</div>';
+  }).join('');
+  autoGrowAll(list);
+}
+async function toggleOrEdit(id){if(!confirmLeave())return;orEditId=(String(orEditId)===String(id))?null:id;await loadOther();}
+function cancelOrEdit(){if(!confirmLeave())return;orEditId=null;loadOther();}
+async function addOther(){
+  const btn=document.getElementById('or-add-btn');
+  if(btn.disabled)return;
+  const payload=readOrForm('or');if(!payload)return;
+  btn.disabled=true;btn.textContent='保存中…';
+  try{
+    const reporter=studentById(document.getElementById('or-student').value)||ME;
+    const fileInput=document.getElementById('or-attach');
+    payload.student_id=reporter.id;
+    payload.store=reporter.store;
+    payload.author_id=ME?ME.id:null;
+    payload.attachments=fileInput.files.length?await uploadAttachments(fileInput.files):[];
+    if(payload.attachments.length<fileInput.files.length){alert('添付ファイルがアップロードできなかったので、まだ保存していません。もう一度「保存する」を押してください。');return;}
+    const {error}=await sb.from('other_reports').insert(payload);
+    if(error){alert('エラー: '+error.message);return;}
+    alert('報告を保存しました');
+    resetOrForm();
+    loadOther();
+  }finally{btn.disabled=false;btn.textContent='保存する';}
+}
+async function saveOrEdit(id){
+  const r=window.__orRows[id];if(!r||!canEditOr(r))return;
+  const p='oredit'+id;
+  const payload=readOrForm(p);if(!payload)return;
+  const fileInput=document.getElementById(p+'-attach');
+  const added=fileInput.files.length?await uploadAttachments(fileInput.files):[];
+  payload.attachments=(r.attachments||[]).concat(added);
+  payload.updated_at=new Date().toISOString();
+  const {error}=await sb.from('other_reports').update(payload).eq('id',id);
+  if(error){alert('エラー: '+error.message);return;}
+  setDirty(false);
+  orEditId=null;
+  loadOther();
+}
+async function delOrAttachment(id,idx){
+  const r=window.__orRows[id];if(!r)return;
+  const atts=(r.attachments||[]).slice();atts.splice(idx,1);
+  const {error}=await sb.from('other_reports').update({attachments:atts}).eq('id',id);
+  if(error){alert('エラー: '+error.message);return;}
+  loadOther();
+}
+async function deleteOther(id){
+  const r=window.__orRows[id];if(!r||!canEditOr(r))return;
+  if(!confirm('この報告を削除しますか？'))return;
+  const {error}=await sb.from('other_reports').delete().eq('id',id);
+  if(error){alert('エラー: '+error.message);return;}
+  loadOther();
+}
+
+/* ===== 代表専用メモ ===== */
 let rnInlineEditId=null;
 window.__rnRows={};
 function canViewRepNotes(){return hasAccess(REP_NOTE_ROLES,ME);}
@@ -594,13 +804,14 @@ function onRepTabOpen(){
     sel.innerHTML='<option value="">すべて</option>'
       +'<optgroup label="店舗・全体">'+rnSpecialTargets().map(function(t){return '<option value="'+esc(t.key)+'">'+esc(t.label)+'</option>';}).join('')+'</optgroup>'
       +'<optgroup label="スタッフ">'+staff.map(function(s){return '<option value="'+esc(s.id)+'">'+esc(s.name)+'（'+esc(storeLabel(s.store))+'）</option>';}).join('')+'</optgroup>';
+    sel.dataset.prev='';
   }
-  if(!document.getElementById('rn-date').value)document.getElementById('rn-date').value=new Date().toISOString().split('T')[0];
+  if(!document.getElementById('rn-date').value)document.getElementById('rn-date').value=today();
   renderRepNotes();
 }
 async function addRepNote(){
   const key=document.getElementById('rn-student').value;
-  if(!key){alert('対象を選択してください');return;}
+  if(!key){alert('上の選択で、メモの対象（スタッフまたは店舗）を選んでください');return;}
   const btn=document.getElementById('rn-add-btn');
   if(btn.disabled)return;
   btn.disabled=true;
@@ -620,11 +831,12 @@ async function addRepNote(){
     if(error){alert('エラー: '+error.message);return;}
     document.getElementById('rn-content').value='';
     fileInput.value='';
+    setDirty(false);
     renderRepNotes();
   }finally{btn.disabled=false;}
 }
-async function toggleRnEditRow(id){rnInlineEditId=(rnInlineEditId===id)?null:id;await renderRepNotes();autoGrowAll();}
-function cancelRnInlineEdit(){rnInlineEditId=null;renderRepNotes();}
+async function toggleRnEditRow(id){if(!confirmLeave())return;rnInlineEditId=(rnInlineEditId===id)?null:id;await renderRepNotes();autoGrowAll();}
+function cancelRnInlineEdit(){if(!confirmLeave())return;rnInlineEditId=null;renderRepNotes();}
 async function saveRnInlineEdit(id){
   const fileInput=document.getElementById('rnedit-attach-new-'+id);
   const added=fileInput.files.length?await uploadAttachments(fileInput.files):[];
@@ -637,6 +849,7 @@ async function saveRnInlineEdit(id){
   };
   const {error}=await sb.from('rep_staff_notes').update(payload).eq('id',id);
   if(error){alert('エラー: '+error.message);return;}
+  setDirty(false);
   rnInlineEditId=null;
   renderRepNotes();
 }
@@ -648,7 +861,7 @@ async function delRnAttachment(id,idx){
   renderRepNotes();
 }
 async function delRepNote(id){
-  if(!confirm('この記録を削除しますか？'))return;
+  if(!confirm('このメモを削除しますか？'))return;
   const {error}=await sb.from('rep_staff_notes').delete().eq('id',id);
   if(error){alert('エラー: '+error.message);return;}
   renderRepNotes();
@@ -665,22 +878,22 @@ async function renderRepNotes(){
     data=data.filter(function(r){
       if(r.target_label===special.label)return true;
       if(!special.store)return false;
-      const st=students.find(function(s){return s.id===r.student_id;});
+      const st=studentById(r.student_id);
       return !!st&&st.store===special.store;   // 店舗全体を選んだら、その店舗スタッフの記録も表示
     });
   }
   if(keyword){
     data=data.filter(function(r){
-      const st=students.find(function(s){return s.id===r.student_id;});
+      const st=studentById(r.student_id);
       return [r.content,r.created_by,r.category,st?st.name:(r.target_label||'')].join(' ').toLowerCase().indexOf(keyword)!==-1;
     });
   }
   const list=document.getElementById('rn-list');
-  if(!data.length){list.innerHTML='<div class="empty-msg">記録がありません</div>';return;}
+  if(!data.length){list.innerHTML='<div class="empty-msg">メモがありません</div>';return;}
   window.__rnRows={};
   list.innerHTML=data.map(function(r){
     window.__rnRows[r.id]=r;
-    const st=students.find(function(s){return s.id===r.student_id;});
+    const st=studentById(r.student_id);
     const name=st?st.name:(r.target_label||'（不明）');
     if(rnInlineEditId===r.id){
       return '<div class="iv-row"><div class="iv-row-head"><span class="iv-name">'+esc(name)+'</span></div>'
@@ -692,8 +905,7 @@ async function renderRepNotes(){
         +'<div class="save-row"><button class="btn btn-outline" onclick="cancelRnInlineEdit()">キャンセル</button><button class="btn btn-dark" onclick="saveRnInlineEdit('+r.id+')">更新する</button></div></div>';
     }
     return '<div class="iv-row"><div class="iv-row-head"><span class="iv-name">'+esc(name)+'／'+esc(r.category||'')+'</span><span class="iv-meta">'+esc(r.record_date||'')+'　記録者：'+esc(r.created_by||'—')+'</span>'
-      +'<button class="btn btn-outline btn-xs" onclick="toggleRnEditRow('+r.id+')">編集</button>'
-      +'<button class="btn btn-red btn-xs" onclick="delRepNote('+r.id+')">削除</button></div>'
+      +'<span><button class="btn btn-outline btn-xs" onclick="toggleRnEditRow('+r.id+')">編集</button> <button class="btn btn-red btn-xs" onclick="delRepNote('+r.id+')">削除</button></span></div>'
       +'<div class="iv-body">'+esc(r.content||'')+'</div>'+attachLinksHtml(r.attachments)+'</div>';
   }).join('');
 }
@@ -713,7 +925,7 @@ function renderExItems(){
 }
 function updExItem(el){exItems[el.dataset.i][el.dataset.f]=el.value;saveExec(true);}
 function addExecItem(){exItems.push({agenda:'',decision:''});renderExItems();}
-function removeExecItem(i){exItems.splice(i,1);renderExItems();}
+function removeExecItem(i){exItems.splice(i,1);renderExItems();saveExec(true);}
 async function loadExec(){
   const monthSel=document.getElementById('ex-month');
   if(!monthSel.options.length)monthOptions(monthSel,null);
@@ -722,15 +934,20 @@ async function loadExec(){
   renderExItems();
   window.__exRow=data||null;
   document.getElementById('ex-attach-list').innerHTML=attachListHtml(data&&data.attachments,function(i){return 'delExAttachment('+i+')';});
+  setDirty(false);
 }
 async function saveExec(silent){
   const month=document.getElementById('ex-month').value;
   const fileInput=document.getElementById('ex-attach-new');
   const added=(!silent&&fileInput.files.length)?await uploadAttachments(fileInput.files):[];
   const existing=(window.__exRow&&window.__exRow.attachments)||[];
-  const {error}=await sb.from('executive_meetings').upsert({month,agenda_items:exItems,attachments:existing.concat(added),updated_at:new Date().toISOString()},{onConflict:'month'});
+  const {data,error}=await sb.from('executive_meetings').upsert({month,agenda_items:exItems,attachments:existing.concat(added),updated_at:new Date().toISOString()},{onConflict:'month'}).select().maybeSingle();
   if(error){if(!silent)alert('エラー: '+error.message);return;}
-  if(!silent){alert('保存しました');loadExec();}
+  if(data)window.__exRow=data;
+  if(silent){if(!fileInput.files.length)setDirty(false);return;}
+  fileInput.value='';
+  setDirty(false);
+  alert('保存しました');loadExec();
 }
 async function delExAttachment(idx){
   const r=window.__exRow;if(!r)return;
@@ -751,16 +968,15 @@ async function delExAttachment(idx){
   const myStore=STORE_IDS.includes(ME.store)?ME.store:'all';
   document.querySelectorAll('.store-sel').forEach(function(el){
     el.innerHTML='<option value="all">全店舗</option>'+storeOptionsHtml(myStore==='all'?'':myStore,false);
-    el.value=myStore;
+    el.value=myStore;el.dataset.prev=myStore;
   });
+  document.getElementById('or-cat-filter').innerHTML='<option value="">すべての種類</option>'
+    +OR_CATEGORIES.map(function(c){return '<option value="'+esc(c.name)+'">'+esc(c.name)+'</option>';}).join('')
+    +'<option value="'+OR_FREE+'">その他（自分で入力したもの）</option>';
+  document.getElementById('or-cat-filter').dataset.prev='';
   document.getElementById('rn-category').innerHTML=RN_CATEGORIES.map(function(c){return '<option value="'+c+'">'+c+'</option>';}).join('');
-  monthOptions(document.getElementById('mo-month'),null);
-  monthOptions(document.getElementById('sm-month'),null);
-  monthOptions(document.getElementById('ex-month'),null);
+  ['mo-month','iv-month','ex-month','or-month'].forEach(function(id){monthOptions(document.getElementById(id),null);});
   if(canViewRepNotes())document.getElementById('tab-btn-repnote').style.display='';
-  // 報告の種類：前回選んだものを初期表示（なければ月末報告）
-  try{const last=localStorage.getItem('report_type_last');if(last&&REPORT_TYPES.some(function(t){return t.id===last;}))moType=last;}catch(e){}
-  renderTypeButtons();
   document.getElementById('app-wrap').style.display='block';
   loadMonthly();
 })();
