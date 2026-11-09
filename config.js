@@ -261,12 +261,24 @@ function appLogout() {
   location.href = 'index.html';
 }
 
+// ===== 初回設定（生年月日・入社日・パスワード変更）=====
+// 初期パスワード「2026」のハッシュ値（index.html の hash('2026') と同じ値）
+const INITIAL_PW_HASH = '1537282';
+// まだ初回設定が済んでいない人か（管理者は対象外）
+function needsFirstSetup(me) {
+  if (!me) return false;
+  if ((APP_CONFIG.hiddenPositions || ['管理者']).includes(me.position)) return false;
+  return !me.birthdate || !me.join_date || !me.pw_hash || me.pw_hash === INITIAL_PW_HASH;
+}
+
 async function initAppHeader(sb, activeId) {
   injectHeaderStyle();
   const id = localStorage.getItem('logged_in_id');
   if (!id) { location.href = 'index.html'; return null; }
   const { data: me } = await sb.from('students').select('*').eq('id', id).single();
   if (!me || me.is_active === false) { appLogout(); return null; }
+  // 初回設定が済んでいない人は、ホームで設定してもらう
+  if (needsFirstSetup(me)) { location.href = 'index.html'; return null; }
   // 権限のないページに直接来た場合はホームへ
   const menu = APP_CONFIG.menus.find(function (m) { return m.id === activeId; });
   if (menu && !canAccessMenu(menu, me)) { location.href = 'index.html'; return null; }
