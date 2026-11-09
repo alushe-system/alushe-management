@@ -90,14 +90,96 @@ const APP_CONFIG = {
     evalTarget:    ['マネージャー', 'サブマネージャー', '店長', '副店長', 'スタイリスト', 'アシスタント'],          // 人事評価の対象者
   },
 
+  // 開発者（森）だけが開ける「準備中」メニューを使える人
+  // 役職が「管理者」の人、または下の名前の人（スペースの有無は問わない）
+  developerPositions: ['管理者'],
+  developerNames: ['森亮輔', '森亮介'],
+
+  // 報告の種類（会議報告 →「店舗報告」タブで選んで入力する）
+  //   id = DBの report_type に保存される値（変更しないこと）/ name = 表示名
+  //   note = 入力ルールの説明 / sections = 入力するタイミングごとの見出しと項目
+  //   項目の col は pdca_reports の保存先の列（plan, do_text, deadline_text, check_text, action, other_report, other_authority の7つから選ぶ）
+  reportTypes: [
+    { id: 'monthly', icon: '📋', name: '月末報告',
+      note: '目標・行動・期限は店長会議後3日以内に記入／反省・改善は月末〜月初に記入',
+      sections: [
+        { title: '店長会議後3日以内に記入', items: [
+          { col: 'plan',          label: '目標',         ph: '今月の目標（数字で）' },
+          { col: 'do_text',       label: '行動',         ph: '目標のために何をするか' },
+          { col: 'deadline_text', label: '期限（ToDo）', ph: '誰が・何を・いつまでに行うか' },
+        ]},
+        { title: '月末〜月初に記入', items: [
+          { col: 'check_text', label: '反省', ph: '目標に対して結果はどうだったか・できなかった理由' },
+          { col: 'action',     label: '改善', ph: '来月どう変えるか' },
+        ]},
+        { title: 'その他', items: [
+          { col: 'other_report',    label: 'その他報告',     ph: '' },
+          { col: 'other_authority', label: 'その他権限要求', ph: '' },
+        ]},
+      ]},
+    { id: 'midmonth', icon: '⏱', name: '月中報告',
+      note: '毎月15日〜20日に記入（月末報告の目標に対する途中経過）',
+      sections: [
+        { title: '15日時点の状況', items: [
+          { col: 'plan',       label: '目標に対する進捗', ph: '売上・客数などの現時点の数字と達成率' },
+          { col: 'check_text', label: 'うまくいっていること／課題', ph: '' },
+        ]},
+        { title: '後半の打ち手', items: [
+          { col: 'do_text',       label: '後半の行動',   ph: '月末までに何をするか' },
+          { col: 'deadline_text', label: '期限（ToDo）', ph: '誰が・何を・いつまでに行うか' },
+          { col: 'other_report',  label: '本部への相談・要望', ph: '' },
+        ]},
+      ]},
+    { id: 'training', icon: '🌱', name: '育成報告',
+      note: '月末〜月初に記入（アシスタント・新人スタッフの育成状況）',
+      sections: [
+        { title: '育成の状況', items: [
+          { col: 'plan',       label: '対象スタッフと今月の育成目標', ph: '例：〇〇さん　カラー合格' },
+          { col: 'do_text',    label: '実施した練習・指導',     ph: '練習の回数・内容・担当' },
+          { col: 'check_text', label: '到達度・結果',           ph: 'どこまでできたか・合否' },
+        ]},
+        { title: '来月に向けて', items: [
+          { col: 'action',        label: '来月の課題',   ph: '' },
+          { col: 'deadline_text', label: '期限（ToDo）', ph: '誰が・何を・いつまでに行うか' },
+        ]},
+      ]},
+    { id: 'marketing', icon: '📣', name: '集客・SNS報告',
+      note: '月末〜月初に記入（ホットペッパー・Instagram などの施策と結果）',
+      sections: [
+        { title: '今月の施策と結果', items: [
+          { col: 'plan',       label: '実施した施策',   ph: 'クーポン変更・投稿・ブログ・口コミ対策 など' },
+          { col: 'check_text', label: '数字の結果',     ph: '新規数・予約数・フォロワー数・口コミ数 など' },
+          { col: 'do_text',    label: '良かった点',     ph: '' },
+        ]},
+        { title: '来月に向けて', items: [
+          { col: 'action',        label: '改善・次の施策', ph: '' },
+          { col: 'deadline_text', label: '期限（ToDo）',   ph: '誰が・何を・いつまでに行うか' },
+        ]},
+      ]},
+    { id: 'event', icon: '🎉', name: 'イベント・キャンペーン報告',
+      note: 'イベント・キャンペーン終了後1週間以内に記入（月ごと・店舗ごとに1件）',
+      sections: [
+        { title: '企画', items: [
+          { col: 'plan',    label: '企画名・目的・目標', ph: '例：年末ヘアケアキャンペーン　店販20万円' },
+          { col: 'do_text', label: '実施内容・期間',     ph: '' },
+        ]},
+        { title: '結果と振り返り', items: [
+          { col: 'check_text',    label: '結果（数字）',     ph: '' },
+          { col: 'action',        label: '反省・次回への改善', ph: '' },
+          { col: 'deadline_text', label: '期限（ToDo）',     ph: '誰が・何を・いつまでに行うか' },
+        ]},
+      ]},
+  ],
+
   // メニュー（ホーム画面のカードと上部タブはこの順番で表示）
   // access: 'all' = ログインした全員 / それ以外は roles のキー名
+  // devOnly: true = 今は使っていないメニュー。開発者（森）以外には薄く表示して押せなくする
   menus: [
     { id: 'sales',       icon: '📊', name: '数値管理',         url: 'sales.html',            access: 'all' },
     { id: 'meeting',     icon: '📝', name: '会議報告',         url: 'meeting.html',          access: 'meetingViewer' },
-    { id: 'evaluation',  icon: '⭐', name: '人事評価制度',     url: 'evaluation.html',       access: 'all' },
-    { id: 'schedule',    icon: '📆', name: '年間スケジュール', url: 'schedule.html',         access: 'all' },
-    { id: 'appointment', icon: '📅', name: '次回予約管理',     url: 'next-reservation.html', access: 'all', comingSoon: true },
+    { id: 'evaluation',  icon: '⭐', name: '人事評価制度',     url: 'evaluation.html',       access: 'all', devOnly: true },
+    { id: 'schedule',    icon: '📆', name: '年間スケジュール', url: 'schedule.html',         access: 'all', devOnly: true },
+    { id: 'appointment', icon: '📅', name: '次回予約管理',     url: 'next-reservation.html', access: 'all', devOnly: true },
     { id: 'staff',       icon: '👥', name: '人材マスター',     page: 'staff',                access: 'staffEditor' },
   ],
 };
@@ -160,8 +242,22 @@ function hasAccess(list, me) {
   return isFullAccess(me) && l.includes('管理者');
 }
 
+// 開発者（森）か。役職が developerPositions、または名前が developerNames の人
+function isDeveloper(me) {
+  if (!me) return false;
+  if ((APP_CONFIG.developerPositions || []).includes(me.position)) return true;
+  const nm = String(me.name || '').replace(/[\s　]/g, '');
+  return (APP_CONFIG.developerNames || []).includes(nm);
+}
+
+// 今は「準備中」として薄く表示するメニューか（その人から見て）
+function isMenuLocked(m, me) {
+  if (m.comingSoon) return true;
+  return !!m.devOnly && !isDeveloper(me);
+}
+
 function canAccessMenu(m, me) {
-  if (!me || m.comingSoon) return false;
+  if (!me || isMenuLocked(m, me)) return false;
   if (m.access === 'all') return true;
   return hasAccess(APP_CONFIG.roles[m.access], me);
 }
@@ -170,7 +266,7 @@ function canAccessMenu(m, me) {
 function appNavHtml(activeId, me) {
   let h = '<button class="nav-tab' + (activeId === 'home' ? ' active' : '') + '" onclick="goNav(\'home\')">🏠 ホーム</button>';
   APP_CONFIG.menus.forEach(function (m) {
-    if (m.comingSoon) {
+    if (isMenuLocked(m, me)) {
       h += '<button class="nav-tab" disabled style="opacity:0.4;cursor:not-allowed">' + m.icon + ' ' + m.name + '</button>';
       return;
     }
@@ -186,7 +282,7 @@ function goNav(id) {
   if (typeof window.onAppNav === 'function' && window.onAppNav(id)) return;
   if (id === 'home') { location.href = 'index.html'; return; }
   const m = APP_CONFIG.menus.find(function (x) { return x.id === id; });
-  if (!m || m.comingSoon) return;
+  if (!m || m.comingSoon) return;   // devOnly の制限は各ページの initAppHeader で確認する
   location.href = m.page ? 'index.html#' + m.page : m.url;
 }
 
