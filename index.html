@@ -173,6 +173,7 @@ td.wrap{white-space:normal;min-width:120px;}
       <div class="form-group" style="flex:1"><label>名 *</label><input class="form-inp" id="reg-mei" type="text" maxlength="10" autocomplete="off" placeholder="例：花子"></div>
     </div>
     <div class="form-group"><label>生年月日 *</label><div style="display:flex;gap:6px"><select class="form-sel" id="reg-birth-y" style="flex:2"></select><select class="form-sel" id="reg-birth-m" style="flex:1"></select><select class="form-sel" id="reg-birth-d" style="flex:1"></select></div></div>
+    <div class="form-group"><label>入社日 *</label><div style="display:flex;gap:6px"><select class="form-sel" id="reg-join-y" style="flex:2"></select><select class="form-sel" id="reg-join-m" style="flex:1"></select><select class="form-sel" id="reg-join-d" style="flex:1"></select></div></div>
     <div class="form-group"><label>所属店舗 *</label><select class="form-sel" id="reg-store"></select></div>
     <div class="form-group"><label>役職 *</label><select class="form-sel" id="reg-position"></select></div>
     <div class="form-group"><label>パスワード（4文字以上） *</label><input class="form-inp" type="password" id="reg-pw" autocomplete="new-password"></div>
@@ -221,6 +222,25 @@ td.wrap{white-space:normal;min-width:120px;}
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal('staff-modal')">キャンセル</button>
       <button class="btn btn-dark" id="sm-save-btn" onclick="saveStaff()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 初回設定（名簿から事前登録された人が初めてログインしたとき） -->
+<div class="modal-overlay" id="first-setup-modal">
+  <div class="modal">
+    <div class="modal-title">はじめに登録してください</div>
+    <div class="modal-sub" id="fs-sub"></div>
+    <div class="form-group" id="fs-birth-row"><label>生年月日 *</label><div style="display:flex;gap:6px"><select class="form-sel" id="fs-birth-y" style="flex:2"></select><select class="form-sel" id="fs-birth-m" style="flex:1"></select><select class="form-sel" id="fs-birth-d" style="flex:1"></select></div></div>
+    <div class="form-group" id="fs-join-row"><label>入社日 *</label><div style="display:flex;gap:6px"><select class="form-sel" id="fs-join-y" style="flex:2"></select><select class="form-sel" id="fs-join-m" style="flex:1"></select><select class="form-sel" id="fs-join-d" style="flex:1"></select></div></div>
+    <div id="fs-pw-rows">
+      <div class="form-group"><label>新しいパスワード（4文字以上・「2026」以外） *</label><input class="form-inp" type="password" id="fs-pw" autocomplete="new-password"></div>
+      <div class="form-group"><label>新しいパスワード（確認） *</label><input class="form-inp" type="password" id="fs-pw2" autocomplete="new-password"></div>
+    </div>
+    <div class="modal-err" id="fs-err"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="doLogout()">別の人でログイン</button>
+      <button class="btn btn-dark" id="fs-btn" onclick="saveFirstSetup()">登録してはじめる</button>
     </div>
   </div>
 </div>
@@ -551,6 +571,8 @@ document.querySelectorAll('.modal-overlay').forEach(function(el){
     if(e.target!==el)return;
     // 未ログイン時はログイン・新規登録を閉じられないようにする
     if(!ME&&(el.id==='login-modal'||el.id==='register-modal'))return;
+    // 初回設定は終わるまで閉じられないようにする
+    if(el.id==='first-setup-modal')return;
     el.classList.remove('show');
   });
 });
@@ -605,10 +627,54 @@ function onLoggedIn(s){
   closeModal('register-modal');
   applyAuth();
   showPage('dashboard');
+  if(needsFirstSetup(s)){showFirstSetup();return;}
   checkBirthdays(s);
 }
 
+// ===== 初回設定（生年月日・入社日・パスワード変更）=====
+// 名簿から事前登録された人は、生年月日・入社日が空、パスワードが初期値「2026」のまま。
+// 初めてログインしたときにこの画面を出し、入力が終わるまで閉じられない。
+function showFirstSetup(){
+  if(!ME)return;
+  const needPw=!ME.pw_hash||ME.pw_hash===hash('2026');
+  document.getElementById('fs-sub').textContent=ME.name+'さん、はじめてのログインです。次の項目を登録してください。';
+  initDateSels('fs-birth',ME.birthdate||null);
+  initDateSels('fs-join',ME.join_date||null);
+  document.getElementById('fs-pw-rows').style.display=needPw?'':'none';
+  document.getElementById('fs-pw').value='';
+  document.getElementById('fs-pw2').value='';
+  document.getElementById('fs-err').textContent='';
+  document.getElementById('first-setup-modal').classList.add('show');
+}
+async function saveFirstSetup(){
+  const err=document.getElementById('fs-err');
+  const birthdate=getDateVal('fs-birth');
+  const join_date=getDateVal('fs-join');
+  const needPw=document.getElementById('fs-pw-rows').style.display!=='none';
+  const pw=document.getElementById('fs-pw').value;
+  const pw2=document.getElementById('fs-pw2').value;
+  if(!birthdate){err.textContent='生年月日を選択してください';return;}
+  if(!join_date){err.textContent='入社日を選択してください';return;}
+  const upd={birthdate:birthdate,join_date:join_date};
+  if(needPw){
+    if(pw.length<4){err.textContent='パスワードは4文字以上で入力してください';return;}
+    if(pw==='2026'){err.textContent='初期パスワード「2026」以外を設定してください';return;}
+    if(pw!==pw2){err.textContent='パスワードが一致しません';return;}
+    upd.pw_hash=hash(pw);
+  }
+  const btn=document.getElementById('fs-btn');btn.disabled=true;
+  const {error}=await sb.from('students').update(upd).eq('id',ME.id);
+  btn.disabled=false;
+  if(error){err.textContent='エラー: '+error.message;return;}
+  Object.assign(ME,upd);
+  const s=students.find(function(x){return x.id===ME.id;});if(s)Object.assign(s,upd);
+  closeModal('first-setup-modal');
+  alert('登録しました。次回からは新しいパスワードでログインしてください。');
+  checkBirthdays(ME);
+}
+
 function doLogout(){
+  closeModal('first-setup-modal');
   ME=null;
   localStorage.removeItem('logged_in_id');
   applyAuth();
@@ -623,6 +689,7 @@ function showRegisterModal(){
   document.getElementById('reg-store').value='';
   document.getElementById('reg-position').value='';
   initDateSels('reg-birth',null);
+  initDateSels('reg-join',null);
   document.getElementById('reg-err').textContent='';
   document.getElementById('register-modal').classList.add('show');
   setTimeout(function(){document.getElementById('reg-sei').focus();},100);
@@ -636,12 +703,15 @@ async function doRegister(){
   const sei=document.getElementById('reg-sei').value.trim();
   const mei=document.getElementById('reg-mei').value.trim();
   const birthdate=getDateVal('reg-birth');
+  const join_date=getDateVal('reg-join');
   const store=document.getElementById('reg-store').value;
   const position=document.getElementById('reg-position').value;
   const pw=document.getElementById('reg-pw').value;
   const pw2=document.getElementById('reg-pw2').value;
   if(!sei||!mei){err.textContent='姓と名を入力してください';return;}
   if(!birthdate){err.textContent='生年月日を選択してください';return;}
+  if(!join_date){err.textContent='入社日を選択してください';return;}
+  if(pw==='2026'){err.textContent='初期パスワード「2026」以外を設定してください';return;}
   if(!store){err.textContent='所属店舗を選択してください';return;}
   if(!position||!APP_CONFIG.selfRegisterPositions.includes(position)){err.textContent='役職を選択してください';return;}
   if(pw.length<4){err.textContent='パスワードは4文字以上で入力してください';return;}
@@ -651,7 +721,7 @@ async function doRegister(){
     err.textContent='同じ名前がすでに登録されています。ログイン画面から選択してください';return;
   }
   const btn=document.getElementById('reg-btn');btn.disabled=true;
-  const {data,error}=await sb.from('students').insert({name,store,position,birthdate,pw_hash:hash(pw),is_active:true}).select().single();
+  const {data,error}=await sb.from('students').insert({name,store,position,birthdate,join_date,pw_hash:hash(pw),is_active:true}).select().single();
   btn.disabled=false;
   if(error){err.textContent='エラー: '+error.message;return;}
   students.push(data);
@@ -750,7 +820,8 @@ function renderStaffPage(){
 function initDateSels(prefix,val){
   const yS=document.getElementById(prefix+'-y'),mS=document.getElementById(prefix+'-m'),dS=document.getElementById(prefix+'-d');
   const isBirth=prefix.indexOf('birth')!==-1;
-  const yStart=isBirth?1960:2010,yEnd=isBirth?2012:2040;
+  // 入社日は長く勤めている人も選べるように1990年から
+  const yStart=isBirth?1950:1990,yEnd=isBirth?2012:new Date().getFullYear()+1;
   let yOpts='<option value="">年</option>',mOpts='<option value="">月</option>',dOpts='<option value="">日</option>';
   for(let y=yStart;y<=yEnd;y++)yOpts+='<option value="'+y+'">'+y+'年</option>';
   for(let m=1;m<=12;m++)mOpts+='<option value="'+m+'">'+m+'月</option>';
@@ -826,37 +897,51 @@ async function deleteStoreReservation(historyId){
 }
 
 async function saveStaff(){
-  const id=document.getElementById('sm-save-btn').dataset.id;
+  const btn=document.getElementById('sm-save-btn');
+  const errEl=document.getElementById('sm-err');
+  if(btn.disabled)return;   // 2回押して同じ人が2人登録されるのを防ぐ
+  const id=btn.dataset.id;
   const name=document.getElementById('sm-name').value.trim();
   const store=document.getElementById('sm-store').value;
-  const position=document.getElementById('sm-position').value;
+  const position=document.getElementById('sm-position').value||null;
   const birthdate=getDateVal('sm-birth');
   const join_date=getDateVal('sm-join');
   const leave_date=document.getElementById('sm-leavedate').value||null;
   const pw=document.getElementById('sm-pw').value;
-  if(!name){document.getElementById('sm-err').textContent='名前を入力してください';return;}
-  if(!store){document.getElementById('sm-err').textContent='店舗を選択してください';return;}
-  if(!id){
-    const pw_hash=pw?hash(pw):hash('2026');
-    const {data,error}=await sb.from('students').insert({name,store,position,birthdate,join_date,pw_hash,is_active:true}).select().single();
-    if(error){document.getElementById('sm-err').textContent='エラー: '+error.message;return;}
-    students.push(data);
-    await createInitialProgress(data);
-  } else {
-    const s=students.find(function(s){return s.id===id;});
-    const prevStore=s?s.store:null;
-    const upd={name,store,position,birthdate,join_date,leave_date,is_active:!leave_date};
-    if(pw)upd.pw_hash=hash(pw);
-    const {error}=await sb.from('students').update(upd).eq('id',id);
-    if(error){document.getElementById('sm-err').textContent='エラー: '+error.message;return;}
-    if(s)Object.assign(s,upd);
-    if(prevStore!==null&&prevStore!==store){
-      const today=new Date().toISOString().slice(0,10);
-      await saveAssignmentChange(sb,id,'store',store,today,null);
+  if(!name){errEl.textContent='名前を入力してください';return;}
+  if(!store){errEl.textContent='店舗を選択してください';return;}
+  errEl.textContent='';
+  btn.disabled=true;btn.textContent='保存中…';
+  try{
+    if(!id){
+      // パスワードを入れなければ空のまま（初期パスワード「2026」でログインし、初回に本人が変更する）
+      const row={name,store,position,birthdate,join_date,is_active:true};
+      if(pw)row.pw_hash=hash(pw);
+      const {data,error}=await sb.from('students').insert(row).select().single();
+      if(error){errEl.textContent='エラー: '+error.message;return;}
+      students.push(data);
+      try{await createInitialProgress(data);}catch(e){console.error(e);}   // カリキュラムの準備に失敗しても登録は完了させる
+    } else {
+      const s=students.find(function(s){return s.id===id;});
+      const prevStore=s?s.store:null;
+      const upd={name,store,position,birthdate,join_date,leave_date,is_active:!leave_date};
+      if(pw)upd.pw_hash=hash(pw);
+      const {error}=await sb.from('students').update(upd).eq('id',id);
+      if(error){errEl.textContent='エラー: '+error.message;return;}
+      if(s)Object.assign(s,upd);
+      if(prevStore!==null&&prevStore!==store){
+        const today=new Date().toISOString().slice(0,10);
+        await saveAssignmentChange(sb,id,'store',store,today,null);
+      }
     }
+    closeModal('staff-modal');
+    renderStaffPage();
+    alert(name+'さんを保存しました');
+  }catch(e){
+    errEl.textContent='エラー: '+(e&&e.message?e.message:e);
+  }finally{
+    btn.disabled=false;btn.textContent='保存';
   }
-  closeModal('staff-modal');
-  renderStaffPage();
 }
 
 function askDeactivate(id){
@@ -1180,6 +1265,7 @@ function askDelCur(id,name){
   // 他のページから「人材マスター」で来た場合（index.html#staff）
   showPage(location.hash==='#staff'&&canEditStaff()?'staff':'dashboard');
   if(!ME)showLoginModal();
+  else if(needsFirstSetup(ME))showFirstSetup();
 })();
 </script>
 </body>
