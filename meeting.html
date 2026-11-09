@@ -64,8 +64,8 @@ body{background:var(--cream);font-family:'Noto Sans JP',sans-serif;color:var(--d
 .people-box{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:6px;border:1.5px solid var(--gold-light);border-radius:8px;padding:10px;background:#fdfaf6;margin-top:8px;max-height:260px;overflow-y:auto;}
 .people-box label{display:flex;align-items:center;gap:6px;font-size:13px;}
 .people-box .pg{grid-column:1/-1;font-size:11px;font-weight:700;color:var(--gold);margin-top:4px;}
-.dirty-bar{display:none;position:fixed;left:0;right:0;bottom:0;background:#c0392b;color:white;font-size:12.5px;font-weight:600;text-align:center;padding:9px 12px;z-index:50;}
-.dirty-bar.show{display:block;}
+/* iPadで日付の入力欄だけ幅がはみ出すのを防ぐ */
+input[type=date].inp{display:block;max-width:100%;min-height:42px;-webkit-appearance:none;appearance:none;}
 </style>
 </head>
 <body>
@@ -175,7 +175,6 @@ body{background:var(--cream);font-family:'Noto Sans JP',sans-serif;color:var(--d
     <div id="rn-list"></div>
   </div>
 </div>
-<div class="dirty-bar" id="dirty-bar">⚠ 保存していない入力があります（「保存」を押してください）</div>
 
 <script>
 const sb=supabase.createClient(APP_CONFIG.supabaseUrl,APP_CONFIG.supabaseAnon);
@@ -214,10 +213,10 @@ function nextMonthFirst(month){const [y,m]=month.split('-').map(Number);const d=
 /* ===== 保存し忘れの確認 =====
    入力したのに保存していない状態で、タブ・店舗・月の切り替えや他のページへ移動しようとしたら確認する */
 let DIRTY=false;
-function setDirty(v){DIRTY=v;document.getElementById('dirty-bar').classList.toggle('show',v);}
+function setDirty(v){DIRTY=v;}
 function confirmLeave(){
   if(!DIRTY)return true;
-  if(confirm('保存していない入力があります。\n保存せずに移動してよろしいですか？\n（「キャンセル」で入力画面に戻ります）')){setDirty(false);return true;}
+  if(confirm('⚠ 保存していない入力があります。\n\n入力画面に戻って「保存する」ボタンを押してから移動してください。\n\n［キャンセル］入力画面に戻る\n［OK］保存せずに移動する（入力した内容は消えます）')){setDirty(false);return true;}
   return false;
 }
 function isFormInput(el){return el&&el.closest&&el.closest('#app-wrap')&&!el.closest('[data-nodirty]')&&el.hasAttribute&&!el.hasAttribute('data-nodirty');}
