@@ -55,6 +55,13 @@ body{background:var(--cream);font-family:'Noto Sans JP',sans-serif;color:var(--d
 .prev-compact .pf-body.empty{color:var(--soft);}
 .save-row{display:flex;justify-content:flex-end;gap:8px;margin-top:6px;}
 .empty-msg{text-align:center;color:var(--soft);font-size:13px;padding:24px;}
+.rt-row{display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;margin-bottom:8px;padding-bottom:2px;}
+.rt-row::-webkit-scrollbar{display:none;}
+.rt-btn{flex-shrink:0;font-family:'Noto Sans JP',sans-serif;font-size:12.5px;font-weight:600;padding:7px 14px;border-radius:18px;border:1.5px solid var(--gold-light);background:white;color:var(--mid);cursor:pointer;white-space:nowrap;}
+.rt-btn.active{background:var(--dark);border-color:var(--dark);color:white;}
+.rt-note{font-size:11.5px;color:var(--accent);background:#fdf6ec;border:1px solid var(--gold-light);border-radius:8px;padding:8px 12px;margin-bottom:12px;line-height:1.6;}
+.rt-note:empty{display:none;}
+.sec-title{font-size:11px;font-weight:700;color:var(--gold);letter-spacing:1px;margin:14px 0 6px;}
 .att-row{display:flex;align-items:center;gap:8px;margin-bottom:4px;}
 .att-row a,.att-link{color:var(--blue);text-decoration:underline;margin-right:10px;}
 </style>
@@ -66,15 +73,17 @@ body{background:var(--cream);font-family:'Noto Sans JP',sans-serif;color:var(--d
 <div class="wrap" id="app-wrap" style="display:none">
   <!-- 3段目：会議報告の項目（内容は要件定義後に見直し予定） -->
   <div class="tabs">
-    <button class="tab-btn active" data-tab="monthly" onclick="switchTab('monthly')">📋 月末報告</button>
+    <button class="tab-btn active" data-tab="monthly" onclick="switchTab('monthly')">📋 店舗報告</button>
     <button class="tab-btn" data-tab="store" onclick="switchTab('store')">🏪 店舗ミーティング</button>
     <button class="tab-btn" data-tab="interview" onclick="switchTab('interview')">💬 面談報告</button>
     <button class="tab-btn" data-tab="repnote" onclick="switchTab('repnote')" id="tab-btn-repnote" style="display:none">🔒 代表管理</button>
     <button class="tab-btn" data-tab="exec" onclick="switchTab('exec')">🏛 幹部会議</button>
   </div>
 
-  <!-- 月末報告 -->
+  <!-- 店舗報告（月末報告ほか、種類を選んで入力） -->
   <div class="panel active" id="panel-monthly">
+    <div class="rt-row" id="mo-types"></div>
+    <div class="rt-note" id="mo-note"></div>
     <div class="filter-row">
       <select class="sel store-sel" id="mo-store" onchange="loadMonthly()"></select>
       <div class="month-nav">
@@ -244,46 +253,50 @@ function switchTab(name){
   if(name==='exec')loadExec();
 }
 
-/* ===== 月末報告 ===== */
-window.__moRows={};
-// 月末報告の項目（入力するタイミングごとにまとめて表示）
-//   key = 画面の部品名 / label = 見出し / ph = 入力欄のヒント
-const MO_SECTIONS=[
-  {title:'店長会議後3日以内に記入',items:[
-    {key:'plan',label:'目標',ph:'今月の目標（数字で）'},
-    {key:'do',label:'行動',ph:'目標のために何をするか'},
-    {key:'deadline',label:'期限（ToDo）',ph:'誰が・何を・いつまでに行うか'},
-  ]},
-  {title:'月末〜月初に記入',items:[
-    {key:'check',label:'反省',ph:'目標に対して結果はどうだったか・できなかった理由'},
-    {key:'action',label:'改善',ph:'来月どう変えるか'},
-  ]},
-  {title:'その他',items:[
-    {key:'other',label:'その他報告',ph:''},
-    {key:'auth',label:'その他権限要求',ph:''},
+/* ===== 店舗報告（月末報告ほか） ===== */
+// 報告の種類・項目は config.js の reportTypes で管理する（なければ月末報告だけ）
+const REPORT_TYPES=(APP_CONFIG.reportTypes&&APP_CONFIG.reportTypes.length)?APP_CONFIG.reportTypes:[
+  {id:'monthly',icon:'📋',name:'月末報告',note:'',sections:[
+    {title:'店長会議後3日以内に記入',items:[{col:'plan',label:'目標',ph:''},{col:'do_text',label:'行動',ph:''},{col:'deadline_text',label:'期限（ToDo）',ph:''}]},
+    {title:'月末〜月初に記入',items:[{col:'check_text',label:'反省',ph:''},{col:'action',label:'改善',ph:''}]},
   ]},
 ];
-const MO_ITEMS=MO_SECTIONS.reduce(function(a,s){return a.concat(s.items);},[]);
+let moType=REPORT_TYPES[0].id;
+window.__moRows={};
+function curType(){return REPORT_TYPES.find(function(t){return t.id===moType;})||REPORT_TYPES[0];}
+function typeItems(t){return t.sections.reduce(function(a,sec){return a.concat(sec.items);},[]);}
+function renderTypeButtons(){
+  document.getElementById('mo-types').innerHTML=REPORT_TYPES.map(function(t){
+    return '<button class="rt-btn'+(t.id===moType?' active':'')+'" onclick="selectReportType(\''+jsq(t.id)+'\')">'+(t.icon?t.icon+' ':'')+esc(t.name)+'</button>';
+  }).join('');
+  document.getElementById('mo-note').textContent=curType().note||'';
+}
+function selectReportType(id){
+  moType=id;
+  try{localStorage.setItem('report_type_last',id);}catch(e){}
+  renderTypeButtons();
+  loadMonthly();
+}
 function moBlockHtml(store,i){
-  const k='mo'+i;
-  return '<div class="store-head">'+esc(storeLabel(store))+'</div>'
+  const k='mo'+i,t=curType();
+  return '<div class="store-head">'+esc(storeLabel(store))+'　<span style="font-weight:500;color:var(--mid);font-size:12px">'+esc(t.name)+'</span></div>'
     +'<div class="card"><button class="prev-toggle" onclick="togglePrev(\''+k+'\')" id="'+k+'-prev-toggle">▼ 前月の内容を確認</button>'
     +'<div class="prev-compact" id="'+k+'-prev-box" style="display:none">'
-    +MO_ITEMS.map(function(x){
-      return '<div class="pf"><div class="pf-label">'+x.label+'</div><div class="pf-body" id="'+k+'-prev-'+x.key+'"></div></div>';
+    +typeItems(t).map(function(x){
+      return '<div class="pf"><div class="pf-label">'+esc(x.label)+'</div><div class="pf-body" id="'+k+'-prev-'+x.col+'"></div></div>';
     }).join('')
     +'</div></div>'
     +'<div class="card"><div class="card-title" id="'+k+'-cur-label">当月</div>'
-    +MO_SECTIONS.map(function(sec){
-      return '<div style="font-size:11px;font-weight:700;color:var(--gold, #c9a96e);letter-spacing:1px;margin:14px 0 6px">◆ '+sec.title+'</div>'
+    +t.sections.map(function(sec){
+      return '<div class="sec-title">◆ '+esc(sec.title)+'</div>'
         +sec.items.map(function(x){
-          return '<div class="field"><label>'+x.label+'</label><textarea class="txt" id="'+k+'-cur-'+x.key+'" placeholder="'+esc(x.ph)+'"></textarea></div>';
+          return '<div class="field"><label>'+esc(x.label)+'</label><textarea class="txt" id="'+k+'-cur-'+x.col+'" placeholder="'+esc(x.ph||'')+'"></textarea></div>';
         }).join('');
     }).join('')
     +'<div class="field"><label>添付ファイル</label><div id="'+k+'-attach-list"></div><input type="file" class="inp" id="'+k+'-attach-new" multiple></div>'
-    +'<div class="save-row"><button class="btn btn-dark" onclick="saveMonthly('+i+')">'+esc(storeLabel(store))+'を保存</button></div></div>';
+    +'<div class="iv-meta" id="'+k+'-updated" style="text-align:right;margin-bottom:6px"></div>'
+    +'<div class="save-row"><button class="btn btn-dark" onclick="saveMonthly('+i+')">'+esc(storeLabel(store))+'の'+esc(t.name)+'を保存</button></div></div>';
 }
-const MO_FIELDS={plan:'plan',do:'do_text',deadline:'deadline_text',check:'check_text',action:'action',other:'other_report',auth:'other_authority'};
 function togglePrev(k){
   const box=document.getElementById(k+'-prev-box');
   const open=box.style.display!=='none';
@@ -291,25 +304,33 @@ function togglePrev(k){
   const btn=document.getElementById(k+'-prev-toggle');
   btn.textContent=btn.textContent.replace(open?'▲':'▼',open?'▼':'▲');
 }
+function fmtDateTime(iso){
+  if(!iso)return '';
+  const d=new Date(iso);
+  return (d.getMonth()+1)+'/'+d.getDate()+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+}
 async function loadMonthly(){
   const monthSel=document.getElementById('mo-month');
   if(!monthSel.options.length)monthOptions(monthSel,null);
-  const month=monthSel.value,prev=prevMonthStr(month);
+  const month=monthSel.value,prev=prevMonthStr(month),t=curType(),items=typeItems(t);
   const stores=targetStores(document.getElementById('mo-store').value);
   document.getElementById('mo-blocks').innerHTML=stores.map(function(s){return moBlockHtml(s,STORE_IDS.indexOf(s));}).join('');
-  const {data}=await sb.from('pdca_reports').select('*').in('store',stores).eq('report_type','monthly').in('month',[month,prev]);
+  const {data,error}=await sb.from('pdca_reports').select('*').in('store',stores).eq('report_type',t.id).in('month',[month,prev]);
+  if(error){alert('読み込みエラー: '+error.message);return;}
+  if(t.id!==moType)return;   // 読み込み中に種類を切り替えた場合は古い結果を捨てる
   stores.forEach(function(store){
     const k='mo'+STORE_IDS.indexOf(store);
     const cur=(data||[]).find(function(r){return r.store===store&&r.month===month;});
     const pr=(data||[]).find(function(r){return r.store===store&&r.month===prev;});
     document.getElementById(k+'-prev-toggle').textContent='▼ 前月（'+monthLabel(prev)+'）の内容を確認';
     document.getElementById(k+'-cur-label').textContent='当月（'+monthLabel(month)+'）';
-    Object.keys(MO_FIELDS).forEach(function(f){
-      const pv=pr?pr[MO_FIELDS[f]]:'';
-      const el=document.getElementById(k+'-prev-'+f);
+    items.forEach(function(x){
+      const pv=pr?pr[x.col]:'';
+      const el=document.getElementById(k+'-prev-'+x.col);
       el.textContent=pv||'（未記入）';el.classList.toggle('empty',!pv);
-      document.getElementById(k+'-cur-'+f).value=cur?(cur[MO_FIELDS[f]]||''):'';
+      document.getElementById(k+'-cur-'+x.col).value=cur?(cur[x.col]||''):'';
     });
+    document.getElementById(k+'-updated').textContent=(cur&&cur.updated_at)?'最終保存：'+fmtDateTime(cur.updated_at):'';
     window.__moRows[store]=cur||null;
     const i=STORE_IDS.indexOf(store);
     document.getElementById(k+'-attach-list').innerHTML=attachListHtml(cur&&cur.attachments,function(ai){return 'delMoAttachment('+i+','+ai+')';});
@@ -317,22 +338,22 @@ async function loadMonthly(){
   autoGrowAll();
 }
 async function saveMonthly(i){
-  const store=STORE_IDS[i],k='mo'+i;
+  const store=STORE_IDS[i],k='mo'+i,t=curType();
   const month=document.getElementById('mo-month').value;
   const fileInput=document.getElementById(k+'-attach-new');
   const added=fileInput.files.length?await uploadAttachments(fileInput.files):[];
   const existing=(window.__moRows[store]&&window.__moRows[store].attachments)||[];
-  const payload={store,month,report_type:'monthly',attachments:existing.concat(added),updated_at:new Date().toISOString()};
-  Object.keys(MO_FIELDS).forEach(function(f){payload[MO_FIELDS[f]]=document.getElementById(k+'-cur-'+f).value;});
+  const payload={store,month,report_type:t.id,attachments:existing.concat(added),updated_at:new Date().toISOString()};
+  typeItems(t).forEach(function(x){payload[x.col]=document.getElementById(k+'-cur-'+x.col).value;});
   const {error}=await sb.from('pdca_reports').upsert(payload,{onConflict:'store,month,report_type'});
   if(error){alert('エラー: '+error.message);return;}
-  alert(storeLabel(store)+'を保存しました');
+  alert(storeLabel(store)+'の'+t.name+'を保存しました');
   loadMonthly();
 }
 async function delMoAttachment(i,idx){
   const store=STORE_IDS[i],r=window.__moRows[store];if(!r)return;
   const atts=(r.attachments||[]).slice();atts.splice(idx,1);
-  const {error}=await sb.from('pdca_reports').update({attachments:atts}).eq('store',store).eq('month',document.getElementById('mo-month').value).eq('report_type','monthly');
+  const {error}=await sb.from('pdca_reports').update({attachments:atts}).eq('store',store).eq('month',document.getElementById('mo-month').value).eq('report_type',curType().id);
   if(error){alert('エラー: '+error.message);return;}
   loadMonthly();
 }
@@ -737,6 +758,9 @@ async function delExAttachment(idx){
   monthOptions(document.getElementById('sm-month'),null);
   monthOptions(document.getElementById('ex-month'),null);
   if(canViewRepNotes())document.getElementById('tab-btn-repnote').style.display='';
+  // 報告の種類：前回選んだものを初期表示（なければ月末報告）
+  try{const last=localStorage.getItem('report_type_last');if(last&&REPORT_TYPES.some(function(t){return t.id===last;}))moType=last;}catch(e){}
+  renderTypeButtons();
   document.getElementById('app-wrap').style.display='block';
   loadMonthly();
 })();
