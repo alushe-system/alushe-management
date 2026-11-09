@@ -33,6 +33,7 @@ body{background:var(--cream);font-family:'Noto Sans JP',sans-serif;color:var(--d
 .page.active{display:block;}
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9000;align-items:center;justify-content:center;}
 .modal-overlay.show{display:flex;}
+#confirm-modal{z-index:9500;}  /* 編集画面の上に確認を出す */
 .modal{background:white;border-radius:16px;padding:24px;max-width:460px;width:94%;box-shadow:0 8px 40px rgba(0,0,0,0.2);max-height:90vh;overflow-y:auto;}
 .modal-lg{max-width:600px;}
 .modal-title{font-size:16px;font-weight:700;margin-bottom:4px;text-align:center;}
@@ -220,6 +221,7 @@ td.wrap{white-space:normal;min-width:120px;}
       <div class="modal-err" id="sm-err"></div>
     </div>
     <div class="modal-actions">
+      <button class="btn btn-red" id="sm-del-btn" onclick="askDeleteStaff()" style="margin-right:auto;display:none">削除</button>
       <button class="btn btn-ghost" onclick="closeModal('staff-modal')">キャンセル</button>
       <button class="btn btn-dark" id="sm-save-btn" onclick="saveStaff()">保存</button>
     </div>
@@ -858,6 +860,8 @@ function openStaffModal(id){
   document.getElementById('sm-pw').value='';
   document.getElementById('sm-save-btn').dataset.id=id||'';
   document.getElementById('sm-history-section').style.display=isNew?'none':'';
+  // 削除ボタン：代表・管理者だけ、既存の人（自分以外）を編集するときに表示
+  document.getElementById('sm-del-btn').style.display=(!isNew&&canDeleteStaff()&&!(ME&&ME.id===id))?'':'none';
   if(!isNew)loadStoreHistory(id);
   document.getElementById('staff-modal').classList.add('show');
   setTimeout(function(){document.getElementById('sm-name').focus();},100);
@@ -942,6 +946,48 @@ async function saveStaff(){
   }finally{
     btn.disabled=false;btn.textContent='保存';
   }
+}
+
+// ===== スタッフの削除 =====
+// テスト登録や登録ミスを消すための機能。代表・管理者（全権限の人を含む）だけが使える。
+// 売上・評価・面談などの記録がある人は消さず、「退社」にしてもらう（記録の持ち主がわからなくなるため）。
+function canDeleteStaff(){return hasAccess(['代表取締役','管理者'],ME);}
+const STAFF_RECORD_TABLES=[
+  ['sales_data','数値管理の売上'],['eval_entries','人事評価'],['eval_quarter_scores','人事評価の点数'],
+  ['staff_interviews','面談報告'],['rep_staff_notes','代表専用メモ'],['other_reports','その他報告'],
+  ['next_reservations','次回予約'],['task_logs','タスク'],['staff_off_days','休みの登録'],
+];
+async function findStaffRecords(id){
+  const found=[];
+  for(const t of STAFF_RECORD_TABLES){
+    const {count,error}=await sb.from(t[0]).select('*',{count:'exact',head:true}).eq('student_id',id);
+    if(!error&&count>0)found.push(t[1]+' '+count+'件');
+  }
+  return found;
+}
+function askDeleteStaff(){
+  const id=document.getElementById('sm-save-btn').dataset.id;
+  const s=students.find(function(x){return x.id===id;});if(!s||!canDeleteStaff())return;
+  showConfirm('スタッフを削除','「'+s.name+'」を完全に削除します。元に戻せません。辞めた人は「退社」にしてください。',async function(){
+    const btn=document.getElementById('sm-del-btn');btn.disabled=true;btn.textContent='確認中…';
+    try{
+      const found=await findStaffRecords(id);
+      if(found.length){
+        alert('「'+s.name+'」さんには次の記録があるため、削除できません。\n\n'+found.join('\n')+'\n\n辞めた人の場合は「退社」にしてください。');
+        return;
+      }
+      // 自動で作られる行（カリキュラム進捗・異動履歴）は一緒に消す
+      await sb.from('progress').delete().eq('student_id',id);
+      await sb.from('assignment_history').delete().eq('student_id',id);
+      const {error}=await sb.from('students').delete().eq('id',id);
+      if(error){alert('削除できませんでした：'+error.message+'\n\n辞めた人の場合は「退社」にしてください。');return;}
+      students=students.filter(function(x){return x.id!==id;});
+      progressRows=progressRows.filter(function(r){return r.student_id!==id;});
+      closeModal('staff-modal');
+      renderStaffPage();
+      alert('「'+s.name+'」を削除しました');
+    }finally{btn.disabled=false;btn.textContent='削除';}
+  });
 }
 
 function askDeactivate(id){
