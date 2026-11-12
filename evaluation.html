@@ -160,20 +160,18 @@ async function getStoreSalesMonth(storeId,year,month){
   const cacheKey=storeId+'_'+monthStr;
   if(storeSalesCache[cacheKey])return storeSalesCache[cacheKey];
   const staffList=students.filter(function(s){return s.store===storeId&&!STORE_SALES_EXCLUDE.includes(s.position);});
-  const staffIds=staffList.map(function(s){return s.id;});
   const {data:prodData}=await sb.from('role_productivity').select('*').lte('month',monthStr).order('month',{ascending:false});
   const roleMap={};
   (prodData||[]).forEach(function(r){if(!(r.position in roleMap))roleMap[r.position]=Number(r.monthly_target)||0;});
-  let salesRows=[];
-  if(staffIds.length){
-    const {data}=await sb.from('sales_data').select('*').in('student_id',staffIds).eq('month',monthStr);
-    salesRows=data||[];
-  }
+  // 実績は「その店舗の行」をすべて足す（兼務・ヘルプの人がこの店舗で出した分も入り、他店舗の分は入らない）
+  const {data}=await sb.from('sales_data').select('*').eq('store',storeId).eq('month',monthStr);
+  const salesRows=data||[];
   let target=0,result=0;
-  staffList.forEach(function(s){
-    target+=roleMap[s.position]||0;
-    const row=salesRows.find(function(r){return r.student_id===s.id;});
-    if(row)result+=Number(row.meimei_sales||0)+Number(row.free_sales||0)+Number(row.tanden||0);
+  staffList.forEach(function(s){target+=roleMap[s.position]||0;});
+  salesRows.forEach(function(row){
+    const st=students.find(function(x){return x.id===row.student_id;});
+    if(st&&STORE_SALES_EXCLUDE.includes(st.position))return;   // 今までどおり代表・管理者の数字は入れない
+    result+=Number(row.meimei_sales||0)+Number(row.free_sales||0)+Number(row.tanden||0);
   });
   const out={target:Math.floor(target),result:Math.floor(result)};
   storeSalesCache[cacheKey]=out;
