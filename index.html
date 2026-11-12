@@ -8,7 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>document.write('<script src="config.js?v='+Date.now()+'"><\/script>');</script>
-<script src="assignment-history.js"></script>
+<script>document.write('<script src="assignment-history.js?v='+Date.now()+'"><\/script>');</script>
 <style>
 :root{
   --cream:#faf6f0;--gold:#c9a96e;--gold-light:#e8d5b0;--dark:#1a1410;
@@ -212,6 +212,16 @@ td.wrap{white-space:normal;min-width:120px;}
           <select class="form-sel" id="sm-history-store" style="flex:1"></select>
           <button class="btn btn-gold btn-xs" onclick="addStoreReservation()">予約追加</button>
         </div>
+      </div>
+      <div class="form-group" id="sm-extra-section" style="display:none">
+        <label>兼務（追加所属店舗）</label>
+        <div id="sm-extra-list" style="margin-bottom:8px"></div>
+        <div style="display:flex;gap:6px">
+          <select class="form-sel" id="sm-extra-store" style="flex:1"></select>
+          <input class="form-inp" type="month" id="sm-extra-from" style="flex:1">
+          <button class="btn btn-gold btn-xs" onclick="addExtraStore()">兼務追加</button>
+        </div>
+        <div style="font-size:11px;color:var(--soft);margin-top:4px">選んだ月から、その店舗の数値管理の表にも毎月出ます（最大2店舗）。1日だけの応援は数値管理の「ヘルプを追加」を使ってください</div>
       </div>
       <div class="form-group"><label>役職</label><select class="form-sel" id="sm-position"></select></div>
       <div class="form-group"><label>生年月日</label><div style="display:flex;gap:6px"><select class="form-sel" id="sm-birth-y" style="flex:2"></select><select class="form-sel" id="sm-birth-m" style="flex:1"></select><select class="form-sel" id="sm-birth-d" style="flex:1"></select></div></div>
@@ -443,6 +453,7 @@ function hasRole(key){return hasAccess(ROLES[key],ME);}
 function nonAdminStudents(){return students.filter(function(s){return ROLES.currTarget.includes(s.position);});}
 
 let students=[],categories=[],curricula=[],progressRows=[];
+let staffStores=[];   // 兼務（追加所属店舗）：staff_stores テーブル
 let CID=null,ME=null,currentPage='dashboard';
 
 function canEditCurriculum(){return hasRole('currEditor');}
@@ -459,6 +470,7 @@ function initStaticUI(){
   const allOpt='<option value="'+esc(APP_CONFIG.allStoresValue)+'">全店共通</option>';
   document.getElementById('sm-store').innerHTML=allOpt+storeOptionsHtml('',false);
   document.getElementById('sm-history-store').innerHTML=storeOptionsHtml('',false);
+  document.getElementById('sm-extra-store').innerHTML=storeOptionsHtml('',false);
   document.getElementById('ov-store-filter').innerHTML=storeOptionsHtml('',true);
   document.getElementById('sf-store-filter').innerHTML=storeOptionsHtml('',true);
   document.getElementById('sm-position').innerHTML='<option value="">未設定</option>'+positionOptionsHtml('');
@@ -480,6 +492,7 @@ async function loadAll(){
     ]);
     if(s.error)throw s.error;
     students=s.data||[];categories=c.data||[];curricula=cu.data||[];progressRows=pr.data||[];
+    staffStores=await loadStaffStores(sb);   // テーブルがまだ無くても止まらない（空のまま）
   }catch(e){
     console.error(e);
     document.getElementById('loading').innerHTML='<div style="color:red;padding:20px">エラー: '+esc(e.message)+'</div>';
@@ -807,7 +820,8 @@ function renderStaffPage(){
   const showInactive=document.getElementById('sf-show-inactive').checked;
   let list=students.filter(function(s){return !isHiddenFor(s);});
   if(!showInactive)list=list.filter(function(s){return s.is_active!==false;});
-  if(storeF)list=list.filter(function(s){return s.store===storeF;});
+  // 店舗で絞り込むときは、今月その店舗を兼務している人も出す
+  if(storeF)list=list.filter(function(s){return s.store===storeF||extraStoresNow(s).indexOf(storeF)!==-1;});
   if(posF)list=list.filter(function(s){return s.position===posF;});
   list=list.slice().sort(function(a,b){
     const po=positionOrder(a.position)-positionOrder(b.position);if(po!==0)return po;
@@ -816,8 +830,15 @@ function renderStaffPage(){
   const grid=document.getElementById('staff-grid');
   if(!list.length){grid.innerHTML='<div style="color:var(--soft);font-size:13px">該当するスタッフがいません</div>';return;}
   grid.innerHTML=list.map(function(s){
-    return '<div class="staff-card'+(s.is_active===false?' inactive':'')+'"><div class="staff-card-actions"><button class="btn btn-outline btn-xs" onclick="openStaffModal(\''+s.id+'\')">編集</button>'+(s.is_active===false?'<button class="btn btn-green btn-xs" onclick="askReactivate(\''+s.id+'\')">復職</button>':'<button class="btn btn-red btn-xs" onclick="askDeactivate(\''+s.id+'\')">退社</button>')+'</div><div class="staff-card-name">'+esc(s.name)+'</div><div class="staff-card-sub">'+esc(storeLabel(s.store))+(s.is_active===false?' ・ <span style="color:var(--red)">退社</span>':'')+'</div>'+(s.position?'<div class="staff-card-pos">'+esc(s.position)+'</div>':'')+'<div style="font-size:11px;color:var(--soft);margin-top:6px">'+(s.birthdate?'生年月日：'+esc(s.birthdate)+'<br>':'')+(s.join_date?'入社日：'+esc(s.join_date)+'<br>':'')+(s.leave_date?'退社日：'+esc(s.leave_date):'')+'</div></div>';
+    return '<div class="staff-card'+(s.is_active===false?' inactive':'')+'"><div class="staff-card-actions"><button class="btn btn-outline btn-xs" onclick="openStaffModal(\''+s.id+'\')">編集</button>'+(s.is_active===false?'<button class="btn btn-green btn-xs" onclick="askReactivate(\''+s.id+'\')">復職</button>':'<button class="btn btn-red btn-xs" onclick="askDeactivate(\''+s.id+'\')">退社</button>')+'</div><div class="staff-card-name">'+esc(s.name)+'</div><div class="staff-card-sub">'+esc(storeLabel(s.store))+extraStoresLabel(s)+(s.is_active===false?' ・ <span style="color:var(--red)">退社</span>':'')+'</div>'+(s.position?'<div class="staff-card-pos">'+esc(s.position)+'</div>':'')+'<div style="font-size:11px;color:var(--soft);margin-top:6px">'+(s.birthdate?'生年月日：'+esc(s.birthdate)+'<br>':'')+(s.join_date?'入社日：'+esc(s.join_date)+'<br>':'')+(s.leave_date?'退社日：'+esc(s.leave_date):'')+'</div></div>';
   }).join('');
+}
+// 今月の兼務先（メイン所属と同じ店舗は除く）
+function thisMonthStr(){const t=new Date();return t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0');}
+function extraStoresNow(s){return extraStoresAsOf(staffStores,s.id,thisMonthStr(),s.store);}
+function extraStoresLabel(s){
+  const l=extraStoresNow(s);
+  return l.length?'<br><span style="font-size:11px;color:#2a5d8f">兼務：'+esc(l.map(storeLabel).join('・'))+'</span>':'';
 }
 function initDateSels(prefix,val){
   const yS=document.getElementById(prefix+'-y'),mS=document.getElementById(prefix+'-m'),dS=document.getElementById(prefix+'-d');
@@ -860,9 +881,11 @@ function openStaffModal(id){
   document.getElementById('sm-pw').value='';
   document.getElementById('sm-save-btn').dataset.id=id||'';
   document.getElementById('sm-history-section').style.display=isNew?'none':'';
+  document.getElementById('sm-extra-section').style.display=isNew?'none':'';
+  document.getElementById('sm-extra-from').value=thisMonthStr();
   // 削除ボタン：代表・管理者だけ、既存の人（自分以外）を編集するときに表示
   document.getElementById('sm-del-btn').style.display=(!isNew&&canDeleteStaff()&&!(ME&&ME.id===id))?'':'none';
-  if(!isNew)loadStoreHistory(id);
+  if(!isNew){loadStoreHistory(id);renderExtraStores(id);}
   document.getElementById('staff-modal').classList.add('show');
   setTimeout(function(){document.getElementById('sm-name').focus();},100);
 }
@@ -898,6 +921,78 @@ async function deleteStoreReservation(historyId){
   await sb.from('assignment_history').delete().eq('id',historyId);
   const id=document.getElementById('sm-save-btn').dataset.id;
   await loadStoreHistory(id);
+}
+
+// ===== 兼務（追加所属店舗） =====
+// メイン所属（上の「店舗」）とは別に、毎月その店舗の数値管理の表にも出す店舗。
+// 終了するときは消さずに「終了月」を入れる（過去の月の数字・表が消えないように）。×は登録ミスの取り消し用
+const MAX_EXTRA_STORES=APP_CONFIG.maxExtraStores||2;
+function ymLabel(dateStr){if(!dateStr)return '';const p=dateStr.split('-');return p[0]+'年'+parseInt(p[1])+'月';}
+function extraRowsOf(id){
+  return staffStores.filter(function(r){return r.student_id===id;})
+    .sort(function(a,b){return a.effective_from<b.effective_from?-1:1;});
+}
+function renderExtraStores(id){
+  const wrap=document.getElementById('sm-extra-list');
+  const rows=extraRowsOf(id);
+  if(!rows.length){wrap.innerHTML='<div style="font-size:12px;color:var(--soft)">兼務なし</div>';return;}
+  const today=new Date().toISOString().slice(0,10);
+  wrap.innerHTML=rows.map(function(r){
+    const ended=!!r.effective_to&&r.effective_to<today;
+    let h='<div class="master-item" style="margin-bottom:4px'+(ended?';opacity:0.55':'')+'"><span>'+esc(storeLabel(r.store))+'<span class="master-item-sub">　'+ymLabel(r.effective_from)+'〜'+(r.effective_to?ymLabel(r.effective_to)+(ended?'（終了）':'まで'):'')+'</span></span>';
+    if(!r.effective_to){
+      h+='<input class="form-inp" type="month" id="sm-extra-to-'+r.id+'" value="'+thisMonthStr()+'" style="width:130px;padding:4px 6px;font-size:12px">'
+        +'<button class="btn btn-outline btn-xs" onclick="endExtraStore(\''+r.id+'\')">この月で終了</button>';
+    }
+    h+='<button class="master-item-del" title="登録ミスの取り消し" onclick="deleteExtraStore(\''+r.id+'\')">×</button></div>';
+    return h;
+  }).join('');
+}
+async function addExtraStore(){
+  const id=document.getElementById('sm-save-btn').dataset.id;
+  const store=document.getElementById('sm-extra-store').value;
+  const from=document.getElementById('sm-extra-from').value;   // 'YYYY-MM'
+  const s=students.find(function(x){return x.id===id;});
+  if(!id||!s)return;
+  if(!store||!from){alert('店舗と開始月を選んでください');return;}
+  const mainNow=document.getElementById('sm-store').value;
+  if(store===mainNow||store===s.store){alert('メイン所属と同じ店舗は兼務にできません');return;}
+  const fromDate=monthToDate(from);
+  const rows=extraRowsOf(id);
+  // 同じ店舗で期間が重なる兼務がないか
+  if(rows.some(function(r){return r.store===store&&(!r.effective_to||r.effective_to>=fromDate);})){
+    alert(storeLabel(store)+'はすでに兼務に登録されています');return;
+  }
+  // その月に有効な兼務が上限を超えないか
+  const active=rows.filter(function(r){return isStaffStoreActive(r,from);});
+  if(active.length>=MAX_EXTRA_STORES){alert('兼務は'+MAX_EXTRA_STORES+'店舗までです');return;}
+  const {data,error}=await sb.from('staff_stores').insert({student_id:id,store:store,effective_from:fromDate}).select().single();
+  if(error){alert('登録に失敗しました: '+error.message);return;}
+  staffStores.push(data);
+  renderExtraStores(id);
+  renderStaffPage();
+}
+async function endExtraStore(rowId){
+  const r=staffStores.find(function(x){return x.id===rowId;});if(!r)return;
+  const ym=document.getElementById('sm-extra-to-'+rowId).value;
+  if(!ym){alert('終了する月を選んでください');return;}
+  const to=monthLastDate(ym);
+  if(to<r.effective_from){alert('開始月より前の月は選べません');return;}
+  if(!confirm(storeLabel(r.store)+'の兼務を'+ymLabel(to)+'で終了します。'+ymLabel(to)+'までの数値管理には、その店舗の行が残ります。'))return;
+  const {error}=await sb.from('staff_stores').update({effective_to:to}).eq('id',rowId);
+  if(error){alert('保存に失敗しました: '+error.message);return;}
+  r.effective_to=to;
+  renderExtraStores(r.student_id);
+  renderStaffPage();
+}
+async function deleteExtraStore(rowId){
+  const r=staffStores.find(function(x){return x.id===rowId;});if(!r)return;
+  if(!confirm(storeLabel(r.store)+'の兼務の登録を取り消します（登録ミスのとき用）。\n終わった兼務は「この月で終了」を使ってください。\n※入力済みの数字は消えません（その月は「ヘルプ」として表示されます）'))return;
+  const {error}=await sb.from('staff_stores').delete().eq('id',rowId);
+  if(error){alert('取り消しに失敗しました: '+error.message);return;}
+  staffStores=staffStores.filter(function(x){return x.id!==rowId;});
+  renderExtraStores(r.student_id);
+  renderStaffPage();
 }
 
 async function saveStaff(){
