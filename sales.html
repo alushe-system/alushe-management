@@ -7,7 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>document.write('<script src="config.js?v='+Date.now()+'"><\/script>');</script>
-<script src="assignment-history.js"></script>
+<script>document.write('<script src="assignment-history.js?v='+Date.now()+'"><\/script>');</script>
 <style>
 :root{--cream:#faf6f0;--gold:#c9a96e;--gold-light:#e8d5b0;--dark:#1a1410;--mid:#7a6a58;--soft:#c4b49e;--accent:#8b5e3c;--green:#4a7c59;--red:#c0392b;--blue:#2980b9;}
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -77,6 +77,19 @@ tr.sum-row td{background:#f5f0eb;font-weight:700;}
 tr.sum-row td:first-child{background:#f5f0eb;}
 .store-fixed{display:inline-block;font-size:14px;font-weight:700;padding:8px 18px;border-radius:20px;border:2px solid var(--gold);background:white;margin-bottom:14px;}
 .mat-row{display:flex;gap:8px;}
+/* 兼務・ヘルプ・スタッフごとの内訳 */
+.type-badge{display:inline-block;font-size:9px;font-weight:700;padding:1px 6px;border-radius:8px;margin-left:4px;vertical-align:middle;}
+.type-badge.kenmu{background:#e3eefa;color:#2a5d8f;}
+.type-badge.help{background:#fdf0d5;color:#9a6a12;}
+.help-del{background:none;border:none;color:var(--soft);font-size:13px;cursor:pointer;padding:0 4px;margin-left:2px;vertical-align:middle;}
+.help-del:hover{color:var(--red);}
+.person-link{background:none;border:none;font-family:'Noto Sans JP',sans-serif;font-size:12px;font-weight:600;color:var(--dark);cursor:pointer;padding:0;text-align:left;}
+.person-link .arw{display:inline-block;width:12px;color:var(--gold);font-size:10px;}
+tr.sub-row td{background:#fbf8f3;font-size:11px;}
+tr.sub-row td:first-child{background:#fbf8f3;padding-left:22px;font-weight:500;color:var(--mid);}
+.help-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px;}
+.help-bar .note{font-size:11px;color:var(--mid);}
+.help-add-btn{font-family:'Noto Sans JP',sans-serif;font-size:13px;font-weight:700;padding:8px 16px;border-radius:9px;border:1.5px dashed var(--gold);background:white;color:var(--accent);cursor:pointer;}
 .mat-row .field{flex:1;}
 /* ===== レイアウト（スマホ基準。iPad以上は下の @media で横に広げる） ===== */
 .main{max-width:1400px;margin:0 auto;padding:14px 12px 80px;}
@@ -196,6 +209,20 @@ tr.sum-row td:first-child{background:#f5f0eb;}
   </div>
 </div>
 
+<!-- ヘルプ追加：他の店舗の人を、この月だけこの店舗の表に出す -->
+<div class="modal-overlay" id="help-modal">
+  <div class="modal">
+    <div class="modal-title">＋ ヘルプを追加</div>
+    <div class="modal-sub" id="help-modal-sub"></div>
+    <div class="modal-row"><select class="modal-sel" id="help-staff-sel"></select></div>
+    <div class="modal-sub" style="font-size:11px">ヘルプで入った分の数字は、この店舗の数字として保存されます。<br>毎月続く場合は、人材マスターで「兼務」に登録してください。</div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('help-modal')">キャンセル</button>
+      <button class="btn btn-dark" id="help-add-ok" onclick="confirmAddHelp()">追加</button>
+    </div>
+  </div>
+</div>
+
 <div class="main">
   <!-- 3段目：何を見るか（月・見かた・範囲）。スマホは縦に1列、iPad以上は横1行 -->
   <div class="ctrl-card">
@@ -258,6 +285,8 @@ tr.sum-row td:first-child{background:#f5f0eb;}
       <tbody id="sales-tbody"><tr><td colspan="12" class="empty-msg">読み込み中...</td></tr></tbody>
     </table>
   </div>
+  <!-- 店舗を1つ選んでいるときだけ表示：ヘルプの追加 -->
+  <div class="help-bar" id="help-bar" style="display:none"></div>
 </div>
 
 <script>
@@ -288,8 +317,12 @@ const INPUT_FIELDS=COLUMNS.filter(function(c){return !c.auto;}).map(function(c){
 // いまの表示で使う列（店舗の一覧は STORE_COLUMNS、スタッフの表は storeOnly を外した COLUMNS）
 function viewColumns(){return isStoreList()?STORE_COLUMNS:COLUMNS.filter(function(c){return !c.storeOnly;});}
 
+// salesData は「人＋店舗」ごと：salesData[rowKey(人id,店舗id)] = { 各項目, db_id, sid, store }
+//   1人が兼務・ヘルプで複数の店舗に入ると、その月の行が店舗の数だけできる
 let ME=null,students=[],salesData={},currentMonth='',currentStore='all',months=[];
-let assignHistory=[],sortField=null,sortAsc=true;
+let assignHistory=[],staffStores=[],sortField=null,sortAsc=true;
+let expanded={};   // スタッフごとの表で内訳を開いている人
+function rowKey(sid,store){return sid+'|'+(store||'');}
 let roleProductivity={},materialRatio={},materialCost={};
 let viewMode='store';   // 集計表示のとき：'store'=店舗ごとの行 / 'person'=個人ごとの行
 
@@ -352,11 +385,11 @@ function renderStatus(){
       el.innerHTML='<span><b>'+esc(scope)+'</b>の店舗ごとの数字（閲覧のみ）</span><span>店舗名をタップすると、その店舗のスタッフの数字を見る・入力できます</span>';
     }
   }else if(isAggregate()){
-    el.innerHTML='<span><b>'+esc(scope)+'</b>のスタッフ全員（閲覧のみ）</span><span>入力するときは「範囲」で店舗を1つ選んでください</span>';
+    el.innerHTML='<span><b>'+esc(scope)+'</b>に関わるスタッフ — 1人の全店舗の合計（閲覧のみ）</span><span>名前をタップすると店舗ごとの内訳が開きます。入力するときは「範囲」で店舗を1つ選んでください</span>';
   }else{
     el.classList.add('editable');
     const back=canViewAllStores()?'<button class="back-btn" onclick="backToStoreList()">← 店舗の一覧に戻る</button>':'';
-    el.innerHTML=back+'<span>✏️ <b>'+esc(scope)+'</b>のスタッフ個人の数字 — 入力できます（自動保存）</span><span>上の合計は店舗の数字です</span>';
+    el.innerHTML=back+'<span>✏️ <b>'+esc(scope)+'</b>で出た個人の数字 — 入力できます（自動保存）</span><span>兼務・ヘルプの人は、この店舗で出た分だけを入力します。上の合計は店舗の数字です</span>';
   }
 }
 function renderView(){
@@ -400,10 +433,13 @@ function backToStoreList(){
   sortField=null;
   renderView();renderTable();
 }
-// 入力できるか：店舗を1つ選んでいるとき。ただし全店共通の人（どの店舗にも属さない）は全店舗表示で入力できる
-function canInputRow(s){
-  return isSingleStore(currentStore)||!isSingleStore(getStoreForMonth(s,currentMonth));
+// 入力できるか：店舗を1つ選んでいるときだけ（数字は必ずどこかの店舗の数字として保存する）
+//   スタッフごとの表は全店舗の合計なので入力できない。全店共通の人も、兼務かヘルプで店舗に入れて入力する
+function canInputRow(){
+  return isSingleStore(currentStore);
 }
+// ヘルプの追加・取り消しができる人（役職別基準値を設定できる人＋店舗の数字を入力できる人）
+function canEditHelp(){return canEditSettings()||canEditStoreSales();}
 
 // ===== 表のヘッダー =====
 function renderHead(){
@@ -459,41 +495,103 @@ async function onMonthChange(){
 function getStoreForMonth(s,month){
   return valueAsOf(assignHistory,s.id,'store',monthToDate(month))||s.store;
 }
-function getStaffList(){
-  let list=students.slice();
-  if(currentStore!=='all')list=list.filter(function(s){return storeFilterMatches(currentStore,getStoreForMonth(s,currentMonth));});
-  // 「役職順」：全店舗を表示しているときも店舗で分けず、全員を役職順に並べる
-  //   （マネージャー → 店長 → 店長 … → 副店長 …）。同じ役職の中は店舗順 → 名前順
-  return list.sort(function(a,b){
-    const po=positionOrder(a.position)-positionOrder(b.position);if(po!==0)return po;
-    const so=storeOrder(getStoreForMonth(a,currentMonth))-storeOrder(getStoreForMonth(b,currentMonth));if(so!==0)return so;
-    return String(a.name).localeCompare(String(b.name),'ja');
+function studentById(id){return students.find(function(x){return x.id===id;})||null;}
+// 同じ役職の中は店舗順 → 名前順（役職順の並び）
+function byPosition(a,b){
+  const po=positionOrder(a.position)-positionOrder(b.position);if(po!==0)return po;
+  const so=storeOrder(getStoreForMonth(a,currentMonth))-storeOrder(getStoreForMonth(b,currentMonth));if(so!==0)return so;
+  return String(a.name).localeCompare(String(b.name),'ja');
+}
+
+// ===== 店舗に出る人（メイン所属・兼務・ヘルプ） =====
+//   main = メイン所属（人材マスターの店舗＋異動予約）
+//   concurrent = 兼務（人材マスターの「兼務（追加所属店舗）」）。毎月自動で出る
+//   help = その月だけ、店舗の表で「ヘルプを追加」した人（＝その店舗の行がある、メインでも兼務でもない人）
+const TYPE_ORDER={main:0,concurrent:1,help:2};
+function entriesOfStore(storeId){
+  const out=[],seen={};
+  students.forEach(function(s){
+    const main=getStoreForMonth(s,currentMonth);
+    let type=null;
+    if(main===storeId)type='main';
+    else if(extraStoresAsOf(staffStores,s.id,currentMonth,main).indexOf(storeId)!==-1)type='concurrent';
+    if(!type)return;
+    out.push({s:s,store:storeId,type:type});seen[s.id]=1;
+  });
+  Object.keys(salesData).forEach(function(k){
+    const d=salesData[k];
+    if(d.store!==storeId||seen[d.sid])return;
+    const s=studentById(d.sid);if(!s)return;   // 退社した人の行は出さない（今までどおり）
+    out.push({s:s,store:storeId,type:'help'});seen[d.sid]=1;
+  });
+  return out.sort(function(a,b){
+    const t=TYPE_ORDER[a.type]-TYPE_ORDER[b.type];if(t!==0)return t;
+    return byPosition(a.s,b.s);
   });
 }
+// その月にこの人の数字が付く店舗（メイン → 兼務 → ヘルプ）
+function partsOfPerson(s){
+  const main=getStoreForMonth(s,currentMonth);
+  const list=[{s:s,store:main,type:'main'}];
+  extraStoresAsOf(staffStores,s.id,currentMonth,main).forEach(function(st){list.push({s:s,store:st,type:'concurrent'});});
+  Object.keys(salesData).forEach(function(k){
+    const d=salesData[k];
+    if(d.sid!==s.id)return;
+    if(list.some(function(x){return x.store===d.store;}))return;
+    list.push({s:s,store:d.store,type:'help'});
+  });
+  return list;
+}
+// スタッフごと × 全店舗・グループ・拠点：範囲の店舗に関わる人（メイン・兼務・ヘルプのどれか）
+//   数字は範囲に関係なく、その人の全店舗の合計
+function personEntries(){
+  return students.filter(function(s){
+    return partsOfPerson(s).some(function(p){return currentStore==='all'||storeFilterMatches(currentStore,p.store);});
+  }).sort(byPosition).map(function(s){
+    const parts=partsOfPerson(s);
+    return {s:s,person:true,parts:parts,d:sumData(parts.map(entryData)),target:targetOf(s)};
+  });
+}
+function entryData(e){return e.person?e.d:(salesData[rowKey(e.s.id,e.store)]||{});}
+// 目標はメイン所属の行だけに付ける（兼務・ヘルプの行には付けない＝店舗の目標が二重にならない）
+function entryTarget(e){return e.person?e.target:(e.type==='main'?targetOf(e.s):0);}
+
 function techOf(d){return Number(d.meimei_sales||0)+Number(d.free_sales||0);}
 function calcResult(d){return techOf(d)+Number(d.tanden||0);}
 function tandenRatio(d){if(d.tanden==null)return null;const r=calcResult(d);return r?Number(d.tanden)/r*100:null;}
 function targetOf(s){return Number(roleProductivity[s.position]||0);}
 
-// ===== スタッフの数字の集計 =====
-// 複数人の数字を合算する。率（再来率）は入力のある人の平均、客単価は技術売上÷総入客数（税抜）
-function aggregate(list){
-  const a={meimei_sales:0,meimei_clients:0,free_clients:0,free_sales:0,tanden:0,milbon_id:0,ticket_count:0,late:0,_target:0,_rn:[],_rr:[]};
-  list.forEach(function(s){
-    const d=salesData[s.id]||{};
-    ['meimei_sales','meimei_clients','free_clients','free_sales','tanden','milbon_id','ticket_count','late'].forEach(function(f){a[f]+=Number(d[f]||0);});
-    if(d.return_new!=null)a._rn.push(Number(d.return_new));
-    if(d.return_reg!=null)a._rr.push(Number(d.return_reg));
-    a._target+=targetOf(s);
+// ===== 個人の数字の集計 =====
+// 金額・人数は足し算。率（再来率）は入力のある行の平均、客単価は技術売上÷総入客数（税抜）
+//   総入客数がないときだけ、入力された客単価の平均
+const SUM_FIELDS=['meimei_sales','meimei_clients','free_clients','free_sales','tanden','milbon_id','ticket_count','late'];
+function sumData(ds){
+  const a={};SUM_FIELDS.forEach(function(f){a[f]=0;});
+  const rn=[],rr=[],up=[];
+  ds.forEach(function(d){
+    SUM_FIELDS.forEach(function(f){a[f]+=Number(d[f]||0);});
+    if(d.return_new!=null)rn.push(Number(d.return_new));
+    if(d.return_reg!=null)rr.push(Number(d.return_reg));
+    if(d.unit_price!=null)up.push(Number(d.unit_price));
   });
-  a.return_new=avg1(a._rn);a.return_reg=avg1(a._rr);
+  a.return_new=avg1(rn);a.return_reg=avg1(rr);
   a.unit_price=unitPriceOf(a);
+  if(a.unit_price==null&&up.length)a.unit_price=Math.round(up.reduce(function(x,y){return x+y;},0)/up.length);
+  return a;
+}
+function aggregate(entries){
+  const a=sumData(entries.map(entryData));
+  a._target=entries.reduce(function(t,e){return t+entryTarget(e);},0);
   return a;
 }
 function avg1(v){return v.length?Math.round(v.reduce(function(x,y){return x+y;},0)/v.length*10)/10:null;}
 function unitPriceOf(d){const c=Number(d.meimei_clients||0)+Number(d.free_clients||0);return c?Math.round(techOf(d)/c):null;}
-function membersOfStore(storeId){
-  return students.filter(function(s){return getStoreForMonth(s,currentMonth)===storeId;});
+// 範囲の店舗に付いている個人の数字（全部の行）。合計パネルの「スタッフ入力の合計」に使う
+function staffRowsInScope(){
+  return Object.keys(salesData).map(function(k){return salesData[k];}).filter(function(d){
+    if(!studentById(d.sid))return false;
+    return currentStore==='all'||storeFilterMatches(currentStore,d.store);
+  });
 }
 
 // ===== 店舗の数字（事務所入力・CSV取り込み：store_sales テーブル） =====
@@ -590,7 +688,7 @@ async function saveStoreMaterial(storeId,col,val){
 // 店舗の一覧の行：選択中の範囲の店舗（データがなくても表示）
 function getStoreRows(){
   return storesInFilter(currentStore).map(function(id){
-    const m=membersOfStore(id);
+    const m=entriesOfStore(id);   // メイン所属＋兼務＋ヘルプ
     return {id:id,label:storeLabel(id),count:m.length,d:storeFig(id),staff:aggregate(m)};
   });
 }
@@ -647,46 +745,156 @@ function renderTable(){
   renderHead();
   const tb=document.getElementById('sales-tbody');
   const colspan=viewColumns().length+1;
+  renderHelpBar();
   if(isAggregate()&&viewMode==='store'){renderStoreTable(tb,colspan);updateTotals();return;}
-  const list=sortList(getStaffList(),function(s){return salesData[s.id]||{};},targetOf);
-  if(!list.length){tb.innerHTML='<tr><td colspan="'+colspan+'" class="empty-msg">対象スタッフがいません</td></tr>';updateTotals();return;}
-  tb.innerHTML=list.map(function(s){
-    const d=salesData[s.id]||{};
-    const dis=canInputRow(s)?'':' disabled';
-    const auto=autoCells(d,targetOf(s),s.id);
-    const storeTag=isAggregate()?'<span class="store-badge">'+esc(storeLabel(getStoreForMonth(s,currentMonth)))+'</span>':'';
-    let row='<tr><td>'+esc(s.name)+'<span class="pos-badge">'+esc(s.position||'')+'</span>'+storeTag+'</td>';
-    viewColumns().forEach(function(c){
-      if(c.auto){row+=auto[c.f];return;}
-      if(c.select){row+='<td><select class="tbl-sel" data-sid="'+s.id+'" data-f="'+c.f+'"'+dis+'>'+numOpts(20,d[c.f])+'</select></td>';return;}
-      const val=d[c.f]==null?'':d[c.f];
-      const ph=c.pct?'0.0':'0';
-      const step=c.pct?' step="0.1"':(c.int?' step="1" inputmode="numeric"':'');
-      row+='<td><input type="number" class="num-inp'+(c.pct?' pct':'')+'" data-sid="'+s.id+'" data-f="'+c.f+'" placeholder="'+ph+'"'+step+' value="'+esc(val)+'"'+dis+'></td>';
-    });
-    return row+'</tr>';
-  }).join('');
-
-  tb.querySelectorAll('input,select').forEach(function(el){
-    el.addEventListener('change',function(){
-      const sid=el.dataset.sid,field=el.dataset.f,val=el.value===''?null:Number(el.value);
-      if(!salesData[sid])salesData[sid]={};
-      salesData[sid][field]=val;
-      refreshRowAuto(sid);
-      updateTotals();
-      saveSalesData(sid,field,val);
-    });
-  });
+  if(isAggregate()){renderPersonTable(tb,colspan);updateTotals();return;}
+  renderStoreStaffTable(tb,colspan);
   updateTotals();
 }
-// 入力したときに、その行の自動計算だけ更新する
-function refreshRowAuto(sid){
-  const d=salesData[sid]||{};
-  [['result',calcResult(d)],['tech',techOf(d)]].forEach(function(p){
-    const v=p[1];
-    document.getElementById(p[0]+'-'+sid).textContent=v?Math.round(v).toLocaleString():'—';
+
+// 1行分のセル（入力欄 or 自動計算）。key があれば自動計算のセルに id を付ける（入力時の部分更新用）
+function rowCellsHtml(d,target,editable,key,sid,store){
+  const auto=autoCells(d,target,key);
+  const dis=editable?'':' disabled';
+  const data=editable?' data-key="'+key+'" data-sid="'+sid+'" data-store="'+esc(store)+'"':'';
+  let h='';
+  viewColumns().forEach(function(c){
+    if(c.auto){h+=auto[c.f];return;}
+    if(c.select){h+='<td><select class="tbl-sel"'+data+' data-f="'+c.f+'"'+dis+'>'+numOpts(20,d[c.f])+'</select></td>';return;}
+    const val=d[c.f]==null?'':d[c.f];
+    const ph=c.pct?'0.0':'0';
+    const step=c.pct?' step="0.1"':(c.int?' step="1" inputmode="numeric"':'');
+    h+='<td><input type="number" class="num-inp'+(c.pct?' pct':'')+'"'+data+' data-f="'+c.f+'" placeholder="'+ph+'"'+step+' value="'+esc(val)+'"'+dis+'></td>';
   });
-  const tr=document.getElementById('tratio-'+sid);if(tr)tr.textContent=ratioText(d);
+  return h;
+}
+function typeBadgeHtml(type){
+  if(type==='concurrent')return '<span class="type-badge kenmu">兼務</span>';
+  if(type==='help')return '<span class="type-badge help">ヘルプ</span>';
+  return '';
+}
+
+// 店舗を1つ選んでいるとき：その店舗で出た個人の数字（メイン所属 → 兼務 → ヘルプ）。入力できる
+function renderStoreStaffTable(tb,colspan){
+  const list=sortList(entriesOfStore(currentStore),entryData,entryTarget);
+  if(!list.length){tb.innerHTML='<tr><td colspan="'+colspan+'" class="empty-msg">対象スタッフがいません</td></tr>';return;}
+  const editable=canInputRow();
+  tb.innerHTML=list.map(function(e,i){
+    const key='e'+i,s=e.s,d=entryData(e);
+    let name=esc(s.name)+'<span class="pos-badge">'+esc(s.position||'')+'</span>'+typeBadgeHtml(e.type);
+    if(e.type==='help'&&canEditHelp())name+='<button class="help-del" title="ヘルプを取り消す" onclick="askRemoveHelp(\''+s.id+'\')">✕</button>';
+    if(e.type!=='main')name+='<span class="store-badge">メイン：'+esc(storeLabel(getStoreForMonth(s,currentMonth)))+'</span>';
+    return '<tr><td>'+name+'</td>'+rowCellsHtml(d,entryTarget(e),editable,key,s.id,e.store)+'</tr>';
+  }).join('');
+  if(!editable)return;
+  tb.querySelectorAll('input[data-key],select[data-key]').forEach(function(el){
+    el.addEventListener('change',function(){
+      const sid=el.dataset.sid,store=el.dataset.store,field=el.dataset.f,val=el.value===''?null:Number(el.value);
+      const k=rowKey(sid,store);
+      if(!salesData[k])salesData[k]={sid:sid,store:store};
+      salesData[k][field]=val;
+      refreshRowAuto(el.dataset.key,salesData[k]);
+      updateTotals();
+      saveSalesData(sid,store,field,val);
+    });
+  });
+}
+
+// スタッフごと × 全店舗・グループ・拠点：1人1行で全店舗の合計（閲覧のみ）。名前をタップで店舗ごとの内訳
+function renderPersonTable(tb,colspan){
+  const list=sortList(personEntries(),entryData,entryTarget);
+  if(!list.length){tb.innerHTML='<tr><td colspan="'+colspan+'" class="empty-msg">対象スタッフがいません</td></tr>';return;}
+  tb.innerHTML=list.map(function(e){
+    const s=e.s,multi=e.parts.length>1,open=multi&&!!expanded[s.id];
+    const main=e.parts[0].store;
+    let sub=storeLabel(main);
+    if(multi)sub+=' ＋'+(e.parts.length-1)+'店舗';
+    let name='<button class="person-link" onclick="toggleExpand(\''+s.id+'\')"'+(multi?'':' disabled style="cursor:default"')+'><span class="arw">'+(multi?(open?'▾':'▸'):'')+'</span>'+esc(s.name)+'</button>';
+    name+='<span class="pos-badge">'+esc(s.position||'')+'</span><span class="store-badge">'+esc(sub)+'</span>';
+    let h='<tr><td>'+name+'</td>'+rowCellsHtml(e.d,e.target,false)+'</tr>';
+    if(open){
+      e.parts.forEach(function(p){
+        const d=salesData[rowKey(s.id,p.store)]||{};
+        h+='<tr class="sub-row"><td>└ '+esc(storeLabel(p.store))+typeBadgeHtml(p.type)+'</td>'+rowCellsHtml(d,entryTarget(p),false)+'</tr>';
+      });
+    }
+    return h;
+  }).join('');
+}
+function toggleExpand(sid){
+  expanded[sid]=!expanded[sid];
+  renderTable();
+}
+
+// 入力したときに、その行の自動計算だけ更新する
+function refreshRowAuto(key,d){
+  [['result',calcResult(d)],['tech',techOf(d)]].forEach(function(p){
+    const el=document.getElementById(p[0]+'-'+key);
+    if(el)el.textContent=p[1]?Math.round(p[1]).toLocaleString():'—';
+  });
+  const tr=document.getElementById('tratio-'+key);if(tr)tr.textContent=ratioText(d);
+}
+
+// ===== ヘルプ（その月だけ、他の店舗の人をこの店舗の表に出す） =====
+function renderHelpBar(){
+  const bar=document.getElementById('help-bar');
+  if(!isSingleStore(currentStore)||!canEditHelp()){bar.style.display='none';bar.innerHTML='';return;}
+  bar.style.display='';
+  bar.innerHTML='<button class="help-add-btn" onclick="showHelpModal()">＋ ヘルプを追加</button><span class="note">他の店舗の人が、この月に'+esc(storeLabel(currentStore))+'に入ったとき</span>';
+}
+function showHelpModal(){
+  if(!isSingleStore(currentStore)||!canEditHelp())return;
+  const inList={};entriesOfStore(currentStore).forEach(function(e){inList[e.s.id]=1;});
+  const cands=students.filter(function(s){return !inList[s.id];});
+  // メイン所属の店舗ごとにまとめる（全店共通の人が先頭）
+  const groups={};
+  cands.forEach(function(s){const st=getStoreForMonth(s,currentMonth);(groups[st]=groups[st]||[]).push(s);});
+  const keys=Object.keys(groups).sort(function(a,b){return storeOrder(a)-storeOrder(b);});
+  let h='<option value="">スタッフを選んでください</option>';
+  keys.forEach(function(st){
+    h+='<optgroup label="'+esc(storeLabel(st))+'">';
+    groups[st].sort(byPosition).forEach(function(s){h+='<option value="'+s.id+'">'+esc(s.name)+(s.position?'（'+esc(s.position)+'）':'')+'</option>';});
+    h+='</optgroup>';
+  });
+  document.getElementById('help-staff-sel').innerHTML=h;
+  const m=currentMonth.split('-');
+  document.getElementById('help-modal-sub').textContent=m[0]+'年'+parseInt(m[1])+'月 ／ '+storeLabel(currentStore);
+  document.getElementById('help-modal').classList.add('show');
+}
+async function confirmAddHelp(){
+  const sid=document.getElementById('help-staff-sel').value;
+  if(!sid){alert('スタッフを選んでください');return;}
+  const btn=document.getElementById('help-add-ok');
+  if(btn.disabled)return;
+  btn.disabled=true;
+  try{
+    const store=currentStore;
+    const {data,error}=await sb.from('sales_data').upsert(
+      {month:currentMonth,student_id:sid,store:store,updated_at:new Date().toISOString()},
+      {onConflict:'month,student_id,store'}).select().single();
+    if(error){alert('追加に失敗しました: '+error.message);return;}
+    salesData[rowKey(sid,store)]=rowToData(data);
+    closeModal('help-modal');
+    renderTable();
+  }finally{btn.disabled=false;}
+}
+function askRemoveHelp(sid){
+  const k=rowKey(sid,currentStore),d=salesData[k];
+  if(!d||!canEditHelp())return;
+  const s=studentById(sid);
+  const hasNum=INPUT_FIELDS.some(function(f){return d[f]!=null&&Number(d[f])!==0;});
+  const msg=(s?s.name:'')+'さんのヘルプを取り消します。'+(hasNum?'\n入力済みの数字（この店舗の分）も消えます。':'')+'\nよろしいですか？';
+  if(!confirm(msg))return;
+  removeHelp(k);
+}
+async function removeHelp(k){
+  const d=salesData[k];
+  if(d&&d.db_id){
+    const {error}=await sb.from('sales_data').delete().eq('id',d.db_id);
+    if(error){alert('取り消しに失敗しました: '+error.message);return;}
+  }
+  delete salesData[k];
+  renderTable();
 }
 
 // 店舗の一覧の表。入力権限のある人（事務所）は店舗の数字を直接入力できる。最後に合計行を付ける
@@ -801,7 +1009,8 @@ function updateTotals(){
   document.getElementById('tot-cost-sub').textContent=a.cost!=null&&multi?a._costN+'店舗の合計':'';
 
   // スタッフ入力の合計（参考）・アイ込みの注意
-  const staff=calcResult(aggregate(getStaffList()));
+  // 範囲の店舗に付いている個人の行の合計（兼務・ヘルプの人は、その店舗で出た分だけが入る）
+  const staff=calcResult(sumData(staffRowsInScope()));
   let note='店舗の数字（税抜）';
   if(staff){
     note+='　／　スタッフ入力の合計 '+yen(staff);
@@ -877,28 +1086,31 @@ async function saveMaterialRatio(){
 }
 
 // ===== 売上データ =====
+// DBの1行 → salesData の1件。店舗が空の古い行は、その月のメイン所属の店舗として扱う
+function rowToData(row){
+  const s=studentById(row.student_id);
+  const store=row.store||(s?getStoreForMonth(s,currentMonth):'');
+  const d={db_id:row.id,sid:row.student_id,store:store};
+  INPUT_FIELDS.forEach(function(f){d[f]=row[f];});
+  return d;
+}
 async function loadSalesData(){
   salesData={};
-  const {data}=await sb.from('sales_data').select('*').eq('month',currentMonth);
+  const {data,error}=await sb.from('sales_data').select('*').eq('month',currentMonth);
+  if(error){alert('数字の読み込みに失敗しました: '+error.message);return;}
   (data||[]).forEach(function(row){
-    const d={db_id:row.id};
-    INPUT_FIELDS.forEach(function(f){d[f]=row[f];});
-    salesData[row.student_id]=d;
+    const d=rowToData(row);
+    salesData[rowKey(d.sid,d.store)]=d;
   });
 }
-async function saveSalesData(sid,field,val){
-  const existing=salesData[sid];
-  if(existing&&existing.db_id){
-    const {error}=await sb.from('sales_data').update({[field]:val,updated_at:new Date().toISOString()}).eq('id',existing.db_id);
-    if(error)alert('保存に失敗しました: '+error.message);
-    return;
-  }
-  const s=students.find(function(x){return x.id===sid;});
-  const {data,error}=await sb.from('sales_data').insert({
-    month:currentMonth,student_id:sid,store:s?getStoreForMonth(s,currentMonth):null,[field]:val
-  }).select().single();
+// 「人＋月＋店舗」で1行。あれば更新・なければ追加（upsert）。店舗は必ず入れて保存する
+async function saveSalesData(sid,store,field,val){
+  const {data,error}=await sb.from('sales_data').upsert(
+    {month:currentMonth,student_id:sid,store:store,[field]:val,updated_at:new Date().toISOString()},
+    {onConflict:'month,student_id,store'}).select().single();
   if(error){alert('保存に失敗しました: '+error.message);return;}
-  salesData[sid].db_id=data.id;
+  const k=rowKey(sid,store);
+  if(salesData[k])salesData[k].db_id=data.id;
 }
 
 document.querySelectorAll('.modal-overlay').forEach(function(el){
@@ -914,7 +1126,7 @@ document.querySelectorAll('.modal-overlay').forEach(function(el){
   }
   const {data}=await sb.from('students').select('*').order('created_at');
   students=(data||[]).filter(function(s){return s.is_active!==false&&!EXCLUDE_ROLES.includes(s.position);});
-  assignHistory=await loadAssignmentHistory(sb);
+  [assignHistory,staffStores]=await Promise.all([loadAssignmentHistory(sb),loadStaffStores(sb)]);
   months=buildMonths();
   renderMonthSel();
   const t=new Date();
