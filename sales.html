@@ -945,9 +945,21 @@ function storeRowHtml(r,editable){
 }
 function storeSumRowHtml(){
   const d=sumStoreFigs(storesInFilter(currentStore));
-  let row='<tr class="sum-row" id="store-sum-row"><td>'+esc(storeFilterLabel(currentStore))+' 合計</td>';
+  let row='<tr class="sum-row" id="store-sum-row"><td>'+esc(storeFilterLabel(currentStore))+' 合計<span class="pos-badge">'+staffCountInScope()+'名</span></td>';
   STORE_COLUMNS.forEach(function(c){row+=storeValueCell(c,d,null);});
   return row+'</tr>';
+}
+// 範囲のスタッフの人数（1人は1回だけ数える）
+//   メイン所属＋兼務で数える（ヘルプは数えない）。退社者・管理者は students に入っていないので数えない
+//   全店舗のときは全員（全店共通の人も含む）＝人材マスターの「すべての店舗」と同じ人数
+function staffCountInScope(){
+  if(currentStore==='all')return students.length;
+  const ids=storesInFilter(currentStore);
+  return students.filter(function(s){
+    const main=getStoreForMonth(s,currentMonth);
+    if(ids.indexOf(main)!==-1)return true;
+    return extraStoresAsOf(staffStores,s.id,currentMonth,main).some(function(st){return ids.indexOf(st)!==-1;});
+  }).length;
 }
 function renderStoreTable(tb,colspan){
   const editable=canEditStoreSales();
